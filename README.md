@@ -114,14 +114,18 @@ $partner = new Partner($client, $oauth1Token, [
 ]);
 ```
 
-To support Guzzle as the underlying PSR-18 client, you will need
-to install the adapters through composer:
+To support Guzzle as the underlying PSR-18 client, and the
+unserlying PSR-17 message factory through auto-discovery,
+you will need to install the adapters through composer:
 
 * guzzlehttp/psr7
 * guzzlehttp/guzzle
 * php-http/guzzle6-adapter
-* http-interop/http-factory-discovery
 * http-interop/http-factory-guzzle
+* http-interop/http-factory-discovery [later]
+
+Otherwise, the message factory and client can be passed in
+when instantiating (example TODO).
 
 Now we can make a request of the API.
 
