@@ -102,7 +102,7 @@ class Partner extends AbstractClient
 
         $oAuth1Token = $this->getOAuth1Token();
 
-        // TODO: update the token first, refreshing it from storage if
+        // TODO: update the token from storage first, in case
         // another process has already happened to have refreshed it.
 
         $queryParameters = [
@@ -137,14 +137,14 @@ class Partner extends AbstractClient
 
         if (! empty($oAuthData['oauth_problem']) || empty($oAuthData)) {
             throw new RuntimeException(sprintf(
-                'OAuth token refresh error: %s (%s)',
-                $oAuthData['oauth_problem'],
+                'OAuth token refresh error: "%s" (%s)',
+                $oAuthData['oauth_problem'] ?? '',
                 $oAuthData['oauth_problem_advice'] ?? ''
             ));
         }
 
-        // As the refresh looks good, then update the local token details
-        // and fire off persistent storage of them too.
+        // As the refresh looks good, update the local token details
+        // and fire off persistent storage of it too.
 
         $refreshedTokenData = [
             'token' => $oAuthData['oauth_token'],
@@ -156,7 +156,6 @@ class Partner extends AbstractClient
         ];
 
         // Regenerate the token object for further requests.
-        // TODO: persist the token data.
 
         $oAuth1Token = $oAuth1Token->withTokenData($refreshedTokenData);
 

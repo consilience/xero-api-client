@@ -150,8 +150,11 @@ Token renewals - for the Partner application at least - will be handled
 for you automatically.
 
 Another package will handle the payload parsing and request building.
-This package is just conerned with the HTTP access with OAuth 1.0a
+This package is just concerned with the HTTP access with OAuth 1.0a
 credentials.
+
+TODO: simple example of authorising access to an organisation using
+League OAuth 1.0 + Xero plugin.
 
 ## TODO
 
@@ -162,6 +165,8 @@ credentials.
 * Locking mechanism to prevent multiple processes trying to update the OAuth
   token at the same time (the first should lock, refresh the token, then persist
   it, while the remaining processes will be signalled to fetch the fresh details).
+  This package would not do the locking, but the frmework would supply a callback
+  to handle it. We just don't want to lose auhtorisation tokens on a busy service.
 * Allow injection of the URL factory.
 * Support Private and Public applications.
 * Support multiple discovery packages.

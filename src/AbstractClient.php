@@ -9,7 +9,8 @@ namespace Consilience\XeroApi;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Http\Message\UriFactory;
+
+use Http\Message\UriFactoryInterface;
 use InvalidArgumentException;
 
 // Discovery php-http/discovery + adapters
@@ -77,7 +78,7 @@ abstract class AbstractClient implements ClientInterface
     protected $oauth1Token;
 
     /**
-     * @var Http\Message\UriFactory
+     * @var Http\Message\UriFactoryInterface
      */
     protected $uriFactory;
 
@@ -107,34 +108,34 @@ abstract class AbstractClient implements ClientInterface
         return $this->client = $this->client ?? Psr18ClientDiscovery::find();
     }
 
-    public function getOAuth1Token()
+    public function getOAuth1Token(): ?OAuthTokenInterface
     {
         return $this->oauth1Token;
     }
 
-    protected function setOAuth1Token(OAuthTokenInterface $oauth1Token)
+    protected function setOAuth1Token(OAuthTokenInterface $oauth1Token): self
     {
         $this->oauth1Token = $oauth1Token;
         return $this;
     }
 
-    public function withOAuth1Token(OAuthTokenInterface $oauth1Token)
+    public function withOAuth1Token(OAuthTokenInterface $oauth1Token): self
     {
         return (clone $this)->setOAuth1Token($oauth1Token);
     }
 
-    public function getUriFactory()
+    public function getUriFactory(): ?UriFactoryInterface
     {
         return $this->uriFactory;
     }
 
-    protected function setUriFactory(UriFactory $uriFactory)
+    protected function setUriFactory(UriFactoryInterface $uriFactory): self
     {
         $this->uriFactory = $uriFactory;
         return $this;
     }
 
-    public function withUriFactory(UriFactory $uriFactory)
+    public function withUriFactory(UriFactoryInterface $uriFactory): self
     {
         return (clone $this)->setUriFactory($uriFactory);
     }
