@@ -75,12 +75,14 @@ $oauth1Token = new Oauth1Token($tokenCredentials);
 
 // Add a callback to persist any refresh to the token.
 
-$persistCallback = function (Oauth1TokenInterface $oauth1Token) use ($authId, $db) {
+$persistCallback = function (OauthTokenInterface $oauth1Token) use ($authId, $db) {
     $statement = $db->prepare('replace into auth (id, token) values (:id, :token)');
     $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
     $statement->bindValue(':token', json_encode($oauth1Token), \SQLITE3_TEXT);
     $statement->execute();
 };
+
+// Tell the client how to persist any token refreshes.
 
 $oauth1Token = $oauth1Token->withPersistCallback($persistCallback);
 
@@ -121,16 +123,24 @@ you will need to install the adapters through composer:
 * guzzlehttp/psr7
 * guzzlehttp/guzzle
 * php-http/guzzle6-adapter
-* http-interop/http-factory-guzzle
+* http-interop/http-factory-guzzle [needed for the
+  php-http/guzzle6-adapter adaper to work, no idea why]
 * http-interop/http-factory-discovery [later]
 
 Otherwise, the message factory and client can be passed in
 when instantiating (example TODO).
 
 Now we can make a request of the API.
+Any request wil work - GET, POST, PUT and to any Xero endpoint
+that your application supports.
 
 ```php
 use Http\Discovery\MessageFactoryDiscovery;
+
+// The request factory is just an example.
+// If you have a concrete request class, then just use that.
+// We are fetching the organisation from the 2.0 Accounting
+// API and requesting a JSON response.
 
 $messageFactory = MessageFactoryDiscovery::find();
 
@@ -142,6 +152,107 @@ $response = $partner->sendRequest(
 );
 
 $payloadData = json_decode((string)$response->getBody(), true);
+var_dump($payloadData);
+```
+
+```php
+array(5) {
+  ["Id"]=>
+  string(36) "2f7b676d-2b01-4699-9148-f660b8331671"
+  ["Status"]=>
+  string(2) "OK"
+  ["ProviderName"]=>
+  string(25) "Acme Payments"
+  ["DateTimeUTC"]=>
+  string(21) "/Date(1553978254788)/"
+  ["Organisations"]=>
+  array(1) {
+    [0]=>
+    array(30) {
+      ["APIKey"]=>
+      string(30) "STVXGL8FXHG6VIYX1BVKBRGRICMF08"
+      ["Name"]=>
+      string(24) "Acme Payments Company"
+      ["LegalName"]=>
+      string(24) "Acme Payments Company"
+      ["PaysTax"]=>
+      bool(true)
+      ["Version"]=>
+      string(2) "UK"
+      ["OrganisationType"]=>
+      string(7) "COMPANY"
+      ["BaseCurrency"]=>
+      string(3) "GBP"
+      ["CountryCode"]=>
+      string(2) "GB"
+      ["IsDemoCompany"]=>
+      bool(false)
+      ["OrganisationStatus"]=>
+      string(6) "ACTIVE"
+      ["RegistrationNumber"]=>
+      string(0) ""
+      ["TaxNumber"]=>
+      string(11) "12345678910"
+      ["FinancialYearEndDay"]=>
+      int(31)
+      ["FinancialYearEndMonth"]=>
+      int(3)
+      ["SalesTaxBasis"]=>
+      string(7) "ACCRUAL"
+      ["SalesTaxPeriod"]=>
+      string(9) "QUARTERLY"
+      ["DefaultSalesTax"]=>
+      string(13) "Tax Exclusive"
+      ["DefaultPurchasesTax"]=>
+      string(13) "Tax Exclusive"
+      ["CreatedDateUTC"]=>
+      string(21) "/Date(1436961673000)/"
+      ["OrganisationEntityType"]=>
+      string(7) "COMPANY"
+      ["Timezone"]=>
+      string(3) "UTC"
+      ["ShortCode"]=>
+      string(6) ""
+      ["OrganisationID"]=>
+      string(36) "UUID-REDACTED"
+      ["Edition"]=>
+      string(8) "BUSINESS"
+      ["Class"]=>
+      string(7) "STARTER"
+      ["LineOfBusiness"]=>
+      string(20) "Software Development"
+      ["Addresses"]=>
+      array(2) {
+        [0]=>
+        array(7) {
+          ["AddressType"]=>
+          string(6) "STREET"
+          ["AddressLine1"]=>
+          string(10) "1 No Place"
+          ["City"]=>
+          string(9) "Edinburgh"
+          ["Region"]=>
+          string(0) ""
+          ["PostalCode"]=>
+          string(0) ""
+          ["Country"]=>
+          string(2) "UK"
+          ["AttentionTo"]=>
+          string(0) ""
+        }
+      }
+      ["Phones"]=>
+      array(0) {
+      }
+      ["ExternalLinks"]=>
+      array(0) {
+      }
+      ["PaymentTerms"]=>
+      array(0) {
+      }
+    }
+  }
+}
 ```
 
 That's it. With the correct method, URL, `Accept` header and payload
@@ -172,4 +283,7 @@ League OAuth 1.0 + Xero plugin.
 * Support multiple discovery packages.
 * Make all discovery packages optional. Discovery-ception is a risk, having to
   dicover the discovery package installed.
+* Is there a better way of handling key files, perhaps as streams?
+* Some better exception handling, so we can catch a failed token, redacted
+  authorisation, general network error etc and handle appropriately.
 
