@@ -26,7 +26,7 @@ class Token implements OauthTokenInterface
     protected $authorizationExpiresAt;
     protected $xeroOrgMuid;
 
-    // All standard scalare properties for persisting.
+    // All standard scalar properties for persisting.
 
     protected $propertyNames = [
         'token',
@@ -39,17 +39,17 @@ class Token implements OauthTokenInterface
 
     // Modifying or functional properties that are not persisted.
 
-    protected $persistCallback;
+    protected $onPersist;
     protected $guardTimeSeconds = 0;
 
     protected $refreshedFlag = false;
 
-    public function __construct(array $tokenData = [], Callable $persistCallback = null)
+    public function __construct(array $tokenData = [], ?callable $onPersist = null)
     {
         $this->setTokenData($tokenData);
 
-        if ($persistCallback !== null) {
-            $this->setPersistCallback($persistCallback);
+        if ($onPersist !== null) {
+            $this->setPersistCallback($onPersist);
         }
     }
 
@@ -178,9 +178,9 @@ class Token implements OauthTokenInterface
         return $this;
     }
 
-    protected function setPersistCallback(Callable $persistCallback): self
+    protected function setOnPersist(callable $onPersist): self
     {
-        $this->persistCallback = $persistCallback;
+        $this->onPersist = $onPersist;
         return $this;
     }
 
@@ -236,9 +236,9 @@ class Token implements OauthTokenInterface
         return $this->xeroOrgMuid;
     }
 
-    public function getPersistCallback(): ?Callable
+    public function getOnPersist(): ?callable
     {
-        return $this->persistCallback;
+        return $this->onPersist;
     }
 
     /**
@@ -293,9 +293,9 @@ class Token implements OauthTokenInterface
         return (clone $this)->setXeroOrgMuid($xeroOrgMuid);
     }
 
-    public function withPersistCallback(Callable $persistCallback): self
+    public function withOnPersist(?callable $onPersist): self
     {
-        return (clone $this)->setPersistCallback($persistCallback);
+        return (clone $this)->setOnPersist($onPersist);
     }
 
     public function withGuardTimeSeconds(int $guardTimeSeconds): self
@@ -392,8 +392,8 @@ class Token implements OauthTokenInterface
      */
     public function persist()
     {
-        if (is_callable($this->persistCallback)) {
-            ($this->persistCallback)($this);
+        if (is_callable($this->onPersist)) {
+            ($this->onPersist)($this);
         }
     }
 

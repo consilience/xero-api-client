@@ -455,7 +455,8 @@ abstract class AbstractClient implements ClientInterface
     protected function signUsingHmacSha1(string $baseString): string
     {
         $key = rawurlencode($this->getConfigItem('consumer_secret'))
-            . '&' . rawurlencode($this->getToken()->getConfigItem('token_secret'));
+            . '&'
+            . rawurlencode($this->getToken()->getConfigItem('token_secret'));
 
         return hash_hmac('sha1', $baseString, $key, true);
     }

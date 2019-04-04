@@ -75,7 +75,7 @@ $oauth1Token = new Oauth1Token($tokenCredentials);
 
 // Add a callback to persist any refresh to the token.
 
-$persistCallback = function (OauthTokenInterface $oauth1Token) use ($authId, $db) {
+$onPersist = function (OauthTokenInterface $oauth1Token) use ($authId, $db) {
     $statement = $db->prepare('replace into auth (id, token) values (:id, :token)');
     $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
     $statement->bindValue(':token', json_encode($oauth1Token), \SQLITE3_TEXT);
@@ -84,7 +84,7 @@ $persistCallback = function (OauthTokenInterface $oauth1Token) use ($authId, $db
 
 // Tell the client how to persist any token refreshes.
 
-$oauth1Token = $oauth1Token->withPersistCallback($persistCallback);
+$oauth1Token = $oauth1Token->withOnPersist($onPersist);
 
 // We will add a guard time of five minutes.
 // The token will be renewed five minutes early each cycle just to
@@ -286,4 +286,6 @@ League OAuth 1.0 + Xero plugin.
 * Is there a better way of handling key files, perhaps as streams?
 * Some better exception handling, so we can catch a failed token, redacted
   authorisation, general network error etc and handle appropriately.
+* Configuratino should probably be an class rather than an array. It would
+  be self documenting, validating, serialisable etc.
 
