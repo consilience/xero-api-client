@@ -116,6 +116,11 @@ $partner = new Partner($client, $oauth1Token, [
 ]);
 ```
 
+The application should be provided, which is used as a User Agent.
+This helps Xero when they look at their logs.
+
+    $partner = $partner->withApplicationName('My Ace Application');
+
 To support Guzzle as the underlying PSR-18 client, and the
 unserlying PSR-17 message factory through auto-discovery,
 you will need to install the adapters through composer:

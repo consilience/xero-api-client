@@ -82,7 +82,13 @@ abstract class AbstractClient implements ClientInterface
      */
     protected $uriFactory;
 
+    protected $applicationName;
+
     /**
+     * TODO: go through the config and distribute any config items over
+     * any setters that are found. The way this is handled can be similar to
+     * the Token config handling, then that can be shared in a trait.
+     *
      * @param OauthTokenInterface $oauth1Token token instance with current credentials
      * @param array $config configuration details
      * @param ClientInterface $client a PSR-18 client or null for auto-discovery
@@ -122,6 +128,22 @@ abstract class AbstractClient implements ClientInterface
     public function withOAuth1Token(OAuthTokenInterface $oauth1Token): self
     {
         return (clone $this)->setOAuth1Token($oauth1Token);
+    }
+
+    public function getApplicationName(): ?string
+    {
+        return $this->applicationName;
+    }
+
+    protected function setApplicationName(string $applicationName): self
+    {
+        $this->applicationName = $applicationName;
+        return $this;
+    }
+
+    public function withApplicationName(string $applicationName): self
+    {
+        return (clone $this)->setApplicationName($applicationName);
     }
 
     public function getUriFactory(): ?UriFactoryInterface

@@ -44,6 +44,14 @@ class Partner extends AbstractClient
 
         $refreshRequired = $this->getOAuth1Token()->isExpired();
 
+        // Set the User Agent to be the application name.
+
+        $applicationName = $this->getApplicationName();
+
+        if ($applicationName !== null && $applicationName !== $request->getHeaderLine('User-Agent')) {
+            $request = $request->withHeader('User-Agent', $applicationName);
+        }
+
         if (! $refreshRequired) {
             // Sign the request then send it, so long as it is not
             // already marked as expired locally.
