@@ -275,22 +275,10 @@ League OAuth 1.0 + Xero plugin.
 ## TODO
 
 * Tests (as usual).
-* Agent property parameter (Xero like to see this set).
-* "Fresh" functionality to allow updated tokens to be reloaded from persistence
-  on all long-running processes accessing Xero.
-* Locking mechanism to prevent multiple processes trying to update the OAuth
-  token at the same time (the first should lock, refresh the token, then persist
-  it, while the remaining processes will be signalled to fetch the fresh details).
-  This package would not do the locking, but the frmework would supply a callback
-  to handle it. We just don't want to lose auhtorisation tokens on a busy service.
-* Allow injection of the URL factory.
-* Support Private and Public applications.
 * Support multiple discovery packages.
-* Make all discovery packages optional. Discovery-ception is a risk, having to
-  dicover the discovery package installed.
 * Is there a better way of handling key files, perhaps as streams?
 * Some better exception handling, so we can catch a failed token, redacted
   authorisation, general network error etc and handle appropriately.
-* Configuratino should probably be an class rather than an array. It would
+* Configuration should probably be an class rather than an array. It would
   be self documenting, validating, serialisable etc.
 
