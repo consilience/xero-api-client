@@ -62,29 +62,46 @@ class Partner extends AbstractClient
             // Check if the token has expired remotely. If it has, it can be renewed.
             // This will arrive as a text/html content type but with a form params payload.
 
+            // FIXME: change the logic here. Check for an expired token and renew
+            // it immediately and retry the original request before looking for
+            // any other errors. Then check the response code and payload after
+            // that for further OAuth errors or general API errors.
+            // Maybe we want to avoid all exceptions (being a PSR-18 client) and
+            // decode OAuth errors into a different payload that can be pulled
+            // into the API models.
+
             $oAuthData = $this->parseOAuthResponseData($response);
 
             if (! empty($oAuthData)) {
                 $oAuthProblem = $oAuthData['oauth_problem'] ?? '';
+                $otherProblem = $oAuthData['error'] ?? '';
 
-                if ($response->getStatusCode() == 401 && $oAuthProblem === static::OAUTH_PROBLEM_TOKEN_EXPIRED) {
+                if ($response->getStatusCode() == 401
+                    && $oAuthProblem === static::OAUTH_PROBLEM_TOKEN_EXPIRED
+                ) {
                     // The token has expired and should be renewed.
 
                     $refreshRequired = true;
-                } else {
+                } elseif ($oAuthProblem !== '') {
                     // Some other non-recoverable OAuth problem.
+                    // TODO: handle this with custom exception.
 
                     throw new RuntimeException(sprintf(
                         'OAuth access error: %s (%s)',
-                        $oAuthData['oauth_problem'],
+                        $oAuthProblem,
                         $oAuthData['oauth_problem_advice'] ?? ''
+                    ));
+                } elseif ($otherProblem !== '') {
+                    // TODO: handle this with custom exception.
+
+                    throw new RuntimeException(sprintf(
+                        'Error: %d (%s)',
+                        $response->getStatusCode(),
+                        $otherProblem
                     ));
                 }
             }
         }
-
-        // TODO: For testing we may want to force a token refresh.
-        //$refreshRequired = true;
 
         if ($refreshRequired) {
             $refreshTokenData = $this->refreshToken();
@@ -95,6 +112,12 @@ class Partner extends AbstractClient
 
             $request = $this->signRequest($request);
             $response = $this->getClient()->sendRequest($request);
+
+            // TODO: we will still want to catch further OAuth or permission
+            // errors that can occur with non-20x responses.
+            // If we don't, then handling of errors will be different if the
+            // token has just been renewed, compared to if it has not been
+            // renewed.
         }
 
         return $response;

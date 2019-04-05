@@ -556,6 +556,10 @@ abstract class AbstractClient implements ClientInterface
 
     /**
      * Extract OAuth payload values from a response.
+     * TODO: change the name of this method. This is effectively non-payload errors,
+     * which could be OAuth errors, or other messages. The trigger for this will
+     * be a combination of the HTTP response code and the content type (which needs
+     * to be compared to the expected content type). It's all a bit messy.
      *
      * @param ResponseInterface $response Response from Xero
      * @return array
@@ -572,9 +576,25 @@ abstract class AbstractClient implements ClientInterface
             $body = (string)$response->getBody();
 
             // If there are any html tags, then this won't be OAuth data.
+            // It must also contain at least one '='. Some responses from
+            // Xero are just plain text strings, some are HTML pages, and
+            // sometimes it's an OAuth payload.
+            //
+            // FIXME: if our expected response is XML, and we are getting XML,
+            // then handle this differently.
 
-            if (strpos($body, '<') === false && strpos($body, '>') === false) {
+            if (strpos($body, '<') !== false || strpos($body, '>') !== false) {
+                // noop
+            } elseif (strpos($body, '=', 1) !== false) {
                 $result = $this->parseQuery($body);
+            } elseif (strpos($body, "\n") === false && strlen($body) <= 160) {
+                // A single line, arbitrary length text message. Example:
+                // "The requested resource could not be found"
+                // This is not actually an OAuth error, but a badly handled
+                // error in the Xero API.
+                // We will need to rethink this a little, maybe throw an excpetion here.
+
+                $result = ['error' => $body];
             }
         }
 
