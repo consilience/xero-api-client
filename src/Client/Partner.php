@@ -10,6 +10,7 @@ namespace Consilience\XeroApi\Client;
 
 use Consilience\XeroApi\AbstractClient;
 use Consilience\XeroApi\Oauth1\Endpoint;
+use Consilience\XeroApi\Oauth1\Token;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -24,7 +25,11 @@ class Partner extends AbstractClient
 {
     /**
      * TODO: before refreshing the token, check if any updates have been
-     * stored then try the updated token.
+     * stored then try the updated token. The Token::reload() method is now
+     * available to do this. Should we check multiple times? probably not - if
+     * the reload gives us a new token, then the refreshing of that was out of
+     * our hands, so we won't be able to frenew it with the details we have
+     * anyway.
      * While refreshing the token, set up a lock so other processes do
      * not update at the same time. The two could be combined, so the lock
      * checks for updates first.
@@ -97,7 +102,7 @@ class Partner extends AbstractClient
         }
 
         if ($refreshRequired) {
-            $refreshTokenData = $this->refreshToken();
+            $this->refreshToken();
 
             // Retry the original request.
             // It needs signing again before sending as the nonce will
@@ -117,75 +122,84 @@ class Partner extends AbstractClient
     }
 
     /**
-     * TODO: set the HTTP agent, required for partner Xero apps.
+     * @return Token the new OAuth token; also sets the token
      */
-    public function refreshToken(): array
+    public function refreshToken(): Token
     {
-        // Create the refresh message.
-        // Being a GET request, everything will be in the URL.
+        // Get the token and check if it can be reloaded from
+        // storage with new details.
 
-        $oAuth1Token = $this->getOAuth1Token();
+        $oAuth1Token = $this->getOAuth1Token()->reload();
 
-        // TODO: update the token from storage first, in case
-        // another process has already happened to have refreshed it.
+        // If the reload gave us a new token, refreshed by
+        // another thread, then use it.
+        // Otherwise, get a new token and persist it.
 
-        $queryParameters = [
-            'oauth_token' => $oAuth1Token->getToken(),
-            'oauth_session_handle' => $oAuth1Token->getSessionHandle(),
-            'oauth_consumer_key' => $this->getConfigItem('consumer_key'),
-            'signature_method' => $this->getConfigItem('signature_method'),
-        ];
+        if (! $oAuth1Token->isRefreshed()) {
+            // Create the refresh message.
+            // Being a GET request, everything will be in the URL.
 
-        $oauth1Endpoint = new Endpoint(); // TODO maybe getAuth1Endpont()?
+            // TODO: update the token from storage first, in case
+            // another process has already happened to have refreshed it.
 
-        if ($uriFactory = $this->getUriFactory()) {
-            $oauth1Endpoint = $oauth1Endpoint->withUriFactory($uriFactory);
+            $queryParameters = [
+                'oauth_token' => $oAuth1Token->getToken(),
+                'oauth_session_handle' => $oAuth1Token->getSessionHandle(),
+                'oauth_consumer_key' => $this->getConfigItem('consumer_key'),
+                'signature_method' => $this->getConfigItem('signature_method'),
+            ];
+
+            $oauth1Endpoint = new Endpoint(); // TODO maybe getAuth1Endpont()?
+
+            if ($uriFactory = $this->getUriFactory()) {
+                $oauth1Endpoint = $oauth1Endpoint->withUriFactory($uriFactory);
+            }
+
+            $refreshUri = $oauth1Endpoint
+                ->getRefreshTokenUri()
+                ->withQuery($this->buildQuery($queryParameters));
+
+            // Create a PSR-7 request message.
+
+            $request = $this->getRequestFactory()->createRequest('GET', $refreshUri);
+
+            $request = $this->signRequest($request, self::REQUEST_METHOD_QUERY);
+
+            $response = $this->getClient()->sendRequest($request);
+
+            $oAuthData = $this->parseOAuthResponseData($response);
+
+            // If the renewal failed, then throw an exception.
+
+            if (! empty($oAuthData['oauth_problem']) || empty($oAuthData)) {
+                throw new RuntimeException(sprintf(
+                    'OAuth token refresh error: "%s" (%s)',
+                    $oAuthData['oauth_problem'] ?? '',
+                    $oAuthData['oauth_problem_advice'] ?? ''
+                ));
+            }
+
+            // As the refresh looks good, update the local token details
+            // and fire off persistent storage of it too.
+
+            $refreshedTokenData = [
+                'token' => $oAuthData['oauth_token'],
+                'token_secret' => $oAuthData['oauth_token_secret'],
+                'expires_in' => (int)$oAuthData['oauth_expires_in'],
+                'session_handle' => $oAuthData['oauth_session_handle'],
+                'authorization_expires_in' => (int)$oAuthData['oauth_authorization_expires_in'],
+                'xero_org_muid' => $oAuthData['xero_org_muid'],
+            ];
+
+            // Regenerate the token object for further requests.
+
+            $oAuth1Token = $oAuth1Token->withTokenData($refreshedTokenData);
+
+            $oAuth1Token->persist();
         }
-
-        $refreshUri = $oauth1Endpoint
-            ->getRefreshTokenUri()
-            ->withQuery($this->buildQuery($queryParameters));
-
-        // Create a PSR-7 request message.
-
-        $request = $this->getRequestFactory()->createRequest('GET', $refreshUri);
-
-        $request = $this->signRequest($request, self::REQUEST_METHOD_QUERY);
-
-        $response = $this->getClient()->sendRequest($request);
-
-        $oAuthData = $this->parseOAuthResponseData($response);
-
-        // If the renewal failed, then throw an exception.
-
-        if (! empty($oAuthData['oauth_problem']) || empty($oAuthData)) {
-            throw new RuntimeException(sprintf(
-                'OAuth token refresh error: "%s" (%s)',
-                $oAuthData['oauth_problem'] ?? '',
-                $oAuthData['oauth_problem_advice'] ?? ''
-            ));
-        }
-
-        // As the refresh looks good, update the local token details
-        // and fire off persistent storage of it too.
-
-        $refreshedTokenData = [
-            'token' => $oAuthData['oauth_token'],
-            'token_secret' => $oAuthData['oauth_token_secret'],
-            'expires_in' => (int)$oAuthData['oauth_expires_in'],
-            'session_handle' => $oAuthData['oauth_session_handle'],
-            'authorization_expires_in' => (int)$oAuthData['oauth_authorization_expires_in'],
-            'xero_org_muid' => $oAuthData['xero_org_muid'],
-        ];
-
-        // Regenerate the token object for further requests.
-
-        $oAuth1Token = $oAuth1Token->withTokenData($refreshedTokenData);
-
-        $oAuth1Token->persist();
 
         $this->setOAuth1Token($oAuth1Token);
 
-        return $refreshedTokenData;
+        return $oAuth1Token;
     }
 }

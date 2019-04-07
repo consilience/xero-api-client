@@ -90,6 +90,9 @@ abstract class AbstractClient implements ClientInterface
         $this->config = $config;
     }
 
+    /**
+     * Get/set/with OAuth token.
+     */
     public function getOAuth1Token(): ?OAuthTokenInterface
     {
         return $this->oauth1Token;
@@ -106,6 +109,9 @@ abstract class AbstractClient implements ClientInterface
         return (clone $this)->setOAuth1Token($oauth1Token);
     }
 
+    /**
+     * Get/set/with application name.
+     */
     public function getApplicationName(): ?string
     {
         return $this->applicationName;
