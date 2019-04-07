@@ -4,7 +4,7 @@ namespace Consilience\XeroApi\Client;
 
 /**
  * Xero Partner Application client.
- * A dectorator for a PSR-18 HTTP client.
+ * A decorator for a PSR-18 HTTP client.
  * This client handles auto-renewals of OAuth 1.0a tokens.
  */
 
@@ -15,15 +15,6 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 use Psr\Http\Client\ClientInterface;
-
-// Discovery php-http/discovery + adapters
-use Http\Discovery\Psr17FactoryDiscovery;
-use Http\Discovery\Psr18ClientDiscovery;
-
-// Discovery http-interop/http-factory-discovery + adapters
-// (Not used yet)
-use Http\Factory\Discovery\HttpFactory;
-use Http\Factory\Discovery\HttpClient;
 
 use InvalidArgumentException;
 use RuntimeException;
@@ -93,6 +84,8 @@ class Partner extends AbstractClient
                     ));
                 } elseif ($otherProblem !== '') {
                     // TODO: handle this with custom exception.
+                    // Perhaps we don't throw an exception (PSR-18 and all) but
+                    // generate our own custom payload with the error details?
 
                     throw new RuntimeException(sprintf(
                         'Error: %d (%s)',
@@ -155,8 +148,7 @@ class Partner extends AbstractClient
 
         // Create a PSR-7 request message.
 
-        $requestFactory = Psr17FactoryDiscovery::findRequestFactory();
-        $request = $requestFactory->createRequest('GET', $refreshUri);
+        $request = $this->getRequestFactory()->createRequest('GET', $refreshUri);
 
         $request = $this->signRequest($request, self::REQUEST_METHOD_QUERY);
 

@@ -378,6 +378,7 @@ class Token implements OauthTokenInterface
      * CHECKME: should this also set a lock on updates in the application,
      * to be released when persisted, on next successful API call, or on
      * end of process?
+     * Probably rename to reload()
      */
     public function fresh(): self
     {

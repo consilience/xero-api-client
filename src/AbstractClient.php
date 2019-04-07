@@ -10,18 +10,12 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
-use Http\Message\UriFactoryInterface;
 use InvalidArgumentException;
-
-// Discovery php-http/discovery + adapters
-use Http\Discovery\Psr18ClientDiscovery;
-
-// Discovery http-interop/http-factory-discovery + adapters
-// (Not used yet)
-use Http\Factory\Discovery\HttpClient;
 
 abstract class AbstractClient implements ClientInterface
 {
+    use HttpTrait;
+
     /**
      * See https://developer.xero.com/documentation/auth-and-limits/oauth-issues
      * @var string Values for the PARAM_OAUTH_PROBLEM parameter
@@ -63,11 +57,6 @@ abstract class AbstractClient implements ClientInterface
     const SIGNATURE_METHOD_PLAINTEXT = 'PLAINTEXT';
 
     /**
-     * @var Psr\Http\Client\ClientInterface
-     */
-    protected $client;
-
-    /**
      * @var array
      */
     protected $config = [];
@@ -76,11 +65,6 @@ abstract class AbstractClient implements ClientInterface
      * @var Consilience\XeroApi\OauthTokenInterface
      */
     protected $oauth1Token;
-
-    /**
-     * @var Http\Message\UriFactoryInterface
-     */
-    protected $uriFactory;
 
     protected $applicationName;
 
@@ -98,20 +82,12 @@ abstract class AbstractClient implements ClientInterface
         array $config,
         ?ClientInterface $client = null
     ) {
-        $this->client = $client;
+        if ($client) {
+            $this->setClient($client);
+        }
+
         $this->oauth1Token = $oauth1Token;
         $this->config = $config;
-    }
-
-    /**
-     * Get the PSR-18 HTTP client.
-     * The client is lazy-discovered.
-     *
-     * @return ClientInterface the supplied client or auto-discovered
-     */
-    public function getClient(): ClientInterface
-    {
-        return $this->client = $this->client ?? Psr18ClientDiscovery::find();
     }
 
     public function getOAuth1Token(): ?OAuthTokenInterface
@@ -144,22 +120,6 @@ abstract class AbstractClient implements ClientInterface
     public function withApplicationName(string $applicationName): self
     {
         return (clone $this)->setApplicationName($applicationName);
-    }
-
-    public function getUriFactory(): ?UriFactoryInterface
-    {
-        return $this->uriFactory;
-    }
-
-    protected function setUriFactory(UriFactoryInterface $uriFactory): self
-    {
-        $this->uriFactory = $uriFactory;
-        return $this;
-    }
-
-    public function withUriFactory(UriFactoryInterface $uriFactory): self
-    {
-        return (clone $this)->setUriFactory($uriFactory);
     }
 
     /**

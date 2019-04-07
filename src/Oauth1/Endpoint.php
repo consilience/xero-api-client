@@ -11,15 +11,12 @@ namespace Consilience\XeroApi\Oauth1;
 use Psr\Http\Message\UriInterface;
 use Psr\Http\Message\UriFactoryInterface;
 
-// Discovery php-http/discovery + adapters
-use Http\Discovery\Psr17FactoryDiscovery;
-
-// Discovery http-interop/http-factory-discovery + adapters
-// (Not used yet)
-use Http\Factory\Discovery\HttpFactory;
+use Consilience\XeroApi\HttpTrait;
 
 class Endpoint
 {
+    use HttpTrait;
+
     /**
      * The default base URL.
      */
@@ -39,11 +36,6 @@ class Endpoint
     protected $baseUrl = self::BASE_URL;
 
     /**
-     * @var Http\Message\UriFactoryInterface
-     */
-    protected $uriFactory;
-
-    /**
      *
      */
     public function __construct(UriFactoryInterface $uriFactory = null)
@@ -51,32 +43,6 @@ class Endpoint
         if ($uriFactory) {
             $this->uriFactory = $uriFactory;
         }
-    }
-
-    /**
-     * Fixme: all the discovery implementations return a Guzzle factory
-     * that does not implement the PSR factory interface.
-     */
-    public function getUriFactory(): UriFactoryInterface
-    {
-        if ($this->uriFactory === null) {
-            // Either will work. Do we try both, depending on what is installed?
-
-            $this->uriFactory = Psr17FactoryDiscovery::findUrlFactory();
-            //$this->uriFactory = HttpFactory::uriFactory();
-        }
-
-        return $this->uriFactory;
-    }
-
-    public function withUriFactory(UriFactoryInterface $uriFactory): self
-    {
-        return (clone $this)->setUriFactory($uriFactory);
-    }
-
-    protected function setUriFactory(UriFactoryInterface $uriFactory): self
-    {
-        $this->iriFactory = $uriFactory;
     }
 
     /**
