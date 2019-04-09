@@ -4,11 +4,16 @@ namespace Consilience\XeroApi;
 
 /**
  * Setting, getting and autodiscovery of HTTP clients and factories.
+ * Keeps any discovery in one place, and keeps the accessors and
+ * mutators consistent throughout.
  */
 
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
 use Psr\Http\Client\ClientInterface;
+
+// Just for docblocks/.
+use TypeError;
 
 // HTTPlug discovery (php-http/discovery + adapters)
 use Http\Discovery\Psr17FactoryDiscovery as HttplugFactoryDiscovery;
@@ -37,6 +42,9 @@ trait HttpTrait
 
     /**
      * Return a PSR-17 Request factory, using discovery if necessary.
+     *
+     * @return RequestFactoryInterface
+     * @throws TypeError if RequestFactory is not set or could be discovered
      */
     public function getRequestFactory(): RequestFactoryInterface
     {
@@ -57,6 +65,10 @@ trait HttpTrait
         return $this;
     }
 
+    /**
+     * @param RequestFactoryInterface $requestFactory PSR-17 request factory to use
+     * @return self clone of $this
+     */
     public function withRequestFactory(RequestFactoryInterface $requestFactory): self
     {
         return (clone $this)->setRequestFactory($requestFactory);
@@ -64,6 +76,9 @@ trait HttpTrait
 
     /**
      * Return a PSR-17 URI factory, using discovery if necessary.
+     *
+     * @return RequestFactoryInterface
+     * @throws TypeError if UriFactory is not set or could be discovered
      */
     public function getUriFactory(): UriFactoryInterface
     {
@@ -84,16 +99,20 @@ trait HttpTrait
         return $this;
     }
 
+    /**
+     * @param UriFactoryInterface $uriFactory PSR-17 uri factory to use
+     * @return self clone of $this
+     */
     public function withUriFactory(UriFactoryInterface $uriFactory): self
     {
         return (clone $this)->setUriFactory($uriFactory);
     }
 
     /**
-     * Get the PSR-18 HTTP client.
-     * The client is lazy-discovered.
+     * Get the PSR-18 HTTP client, using discovery if necessary.
      *
      * @return ClientInterface the supplied client or auto-discovered
+     * @throws TypeError if RequestFactory is not set or could be discovered
      */
     public function getClient(): ClientInterface
     {
@@ -114,6 +133,10 @@ trait HttpTrait
         return $this;
     }
 
+    /**
+     * @param ClientInterface $client PSR-18 client to use
+     * @return self clone of $this
+     */
     public function withClient(ClientInterface $client): self
     {
         return (clone $this)->setClient($client);
