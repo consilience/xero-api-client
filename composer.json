@@ -2,24 +2,27 @@
     "name": "consilience/xero-api",
     "description": "API package for Xero API access, based on Xero OpenAPI specs, PSR-7, PSR-15, PSR-18",
     "type": "library",
-    "require": {
-        "php": "^7.1",
-        "php-http/httplug": "~2.0",
-        "php-http/discovery": "~1.6",
-        "php-http/message": "~1.7"
-    },
     "license": "MIT",
-    "suggest": {
-        "php-http/guzzle6-adapter": "httplug guzzle adapter (still needed?)",
-        "http-interop/http-factory-discovery": "Factory discovery implementation",
-        "http-interop/http-factory-guzzle": "Factory discovery Guzzle adapter"
-    },
     "authors": [
         {
             "name": "Jason Judge",
             "email": "jason.judge@consil.co.uk"
         }
     ],
+    "require": {
+        "php": "^7.1",
+        "php-http/httplug": "~2.0",
+        "php-http/discovery": "~1.6",
+        "php-http/message": "~1.7"
+    },
+    "provide": {
+        "psr/http-client-implementation": "1.0"
+    },
+    "suggest": {
+        "php-http/guzzle6-adapter": "httplug guzzle adapter (still needed?)",
+        "http-interop/http-factory-discovery": "Factory discovery implementation",
+        "http-interop/http-factory-guzzle": "Factory discovery Guzzle adapter"
+    },
     "autoload": {
         "psr-4": {
             "Consilience\\XeroApi\\": "src/"
