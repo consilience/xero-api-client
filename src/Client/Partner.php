@@ -8,7 +8,6 @@ namespace Consilience\XeroApi\Client;
  * This client handles auto-renewals of OAuth 1.0a tokens.
  */
 
-use Consilience\XeroApi\AbstractClient;
 use Consilience\XeroApi\Oauth1\Endpoint;
 use Consilience\XeroApi\Oauth1\Token;
 
@@ -48,7 +47,11 @@ class Partner extends AbstractClient
             $request = $request->withHeader('User-Agent', $applicationName);
         }
 
-        if (! $refreshRequired) {
+        foreach (['PASS1', 'PASS2'] as $pass) {
+            if ($refreshRequired) {
+                $this->refreshToken();
+            }
+
             // Sign the request then send it, so long as it is not
             // already marked as expired locally.
 
@@ -58,10 +61,6 @@ class Partner extends AbstractClient
             // Check if the token has expired remotely. If it has, it can be renewed.
             // This will arrive as a text/html content type but with a form params payload.
 
-            // FIXME: change the logic here. Check for an expired token and renew
-            // it immediately and retry the original request before looking for
-            // any other errors. Then check the response code and payload after
-            // that for further OAuth errors or general API errors.
             // Maybe we want to avoid all exceptions (being a PSR-18 client) and
             // decode OAuth errors into a different payload that can be pulled
             // into the API models.
@@ -76,8 +75,10 @@ class Partner extends AbstractClient
                     && $oAuthProblem === static::OAUTH_PROBLEM_TOKEN_EXPIRED
                 ) {
                     // The token has expired and should be renewed.
+                    // Try a second pass, renewing the token first.
 
                     $refreshRequired = true;
+                    continue;
                 } elseif ($oAuthProblem !== '') {
                     // Some other non-recoverable OAuth problem.
                     // TODO: handle this with custom exception.
@@ -99,23 +100,11 @@ class Partner extends AbstractClient
                     ));
                 }
             }
-        }
 
-        if ($refreshRequired) {
-            $this->refreshToken();
+            // If we got here without finding an OAuth or other error,
+            // then we have a usable response. Don't do a second pass.
 
-            // Retry the original request.
-            // It needs signing again before sending as the nonce will
-            // need changing.
-
-            $request = $this->signRequest($request);
-            $response = $this->getClient()->sendRequest($request);
-
-            // TODO: we will still want to catch further OAuth or permission
-            // errors that can occur with non-20x responses.
-            // If we don't, then handling of errors will be different if the
-            // token has just been renewed, compared to if it has not been
-            // renewed.
+            break;
         }
 
         return $response;

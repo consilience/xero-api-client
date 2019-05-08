@@ -1,6 +1,6 @@
 <?php
 
-namespace Consilience\XeroApi;
+namespace Consilience\XeroApi\Client;
 
 /**
  * Setting, getting and autodiscovery of HTTP clients and factories.

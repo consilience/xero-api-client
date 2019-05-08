@@ -1,14 +1,16 @@
 <?php
 
-namespace Consilience\XeroApi;
+namespace Consilience\XeroApi\Client;
 
 /**
- *
+ * This may need to split into OAuth 1.0a and OAuth 2.0 abstracts
+ * when we start supporting both.
  */
 
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Consilience\XeroApi\OauthTokenInterface;
 
 use InvalidArgumentException;
 
@@ -251,7 +253,10 @@ abstract class AbstractClient implements ClientInterface
     }
 
     /**
-     * @param RequestInterface $request
+     * The request needs signing in the header and as a GET parameter
+     * depending on which stage of the OAuth process we are at.
+     *
+     * @param RequestInterface $request PSR-7 request
      * @param string $requestMethod indicates whether to sign the query string or a header
      */
     protected function signRequest(
@@ -279,9 +284,11 @@ abstract class AbstractClient implements ClientInterface
                 $request = $request->withHeader($header, $value);
                 break;
             case static::REQUEST_METHOD_QUERY:
+                // Deconstruct the query string, add in the signature, then reconstruct it.
+
                 $queryparams = $this->parseQuery($request->getUri()->getQuery());
-                $preparedParams = $this->buildQuery($oauthparams + $queryparams);
-                $request = $request->withUri($request->getUri()->withQuery($preparedParams));
+                $queryString = $this->buildQuery(array_merge($oauthparams, $queryparams));
+                $request = $request->withUri($request->getUri()->withQuery($queryString));
                 break;
             default:
                 throw new InvalidArgumentException(sprintf(
@@ -298,7 +305,7 @@ abstract class AbstractClient implements ClientInterface
      * This builds the OAuth parameters into a CSV list.
      *
      * @param array $params Associative array of authorization parameters.
-     * @return array
+     * @return array [header-name, header-value]
      */
     protected function buildAuthorizationHeader(array $params): array
     {

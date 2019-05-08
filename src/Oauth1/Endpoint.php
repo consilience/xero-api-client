@@ -11,7 +11,7 @@ namespace Consilience\XeroApi\Oauth1;
 use Psr\Http\Message\UriInterface;
 use Psr\Http\Message\UriFactoryInterface;
 
-use Consilience\XeroApi\HttpTrait;
+use Consilience\XeroApi\Client\HttpTrait;
 
 class Endpoint
 {
