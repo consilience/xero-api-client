@@ -47,7 +47,7 @@ class Partner extends AbstractClient
             $request = $request->withHeader('User-Agent', $applicationName);
         }
 
-        foreach (['PASS1', 'PASS2'] as $pass) {
+        foreach ([1, 2] as $pass) {
             if ($refreshRequired) {
                 $this->refreshToken();
             }
@@ -75,7 +75,7 @@ class Partner extends AbstractClient
                     && $oAuthProblem === static::OAUTH_PROBLEM_TOKEN_EXPIRED
                 ) {
                     // The token has expired and should be renewed.
-                    // Try a second pass, renewing the token first.
+                    // Try a second pass, renewing the token on the way through.
 
                     $refreshRequired = true;
                     continue;
@@ -84,7 +84,8 @@ class Partner extends AbstractClient
                     // TODO: handle this with custom exception.
 
                     throw new RuntimeException(sprintf(
-                        'OAuth access error: %s (%s)',
+                        'OAuth access error on pass %d: %s (%s)',
+                        $pass,
                         $oAuthProblem,
                         $oAuthData['oauth_problem_advice'] ?? ''
                     ));
@@ -94,7 +95,8 @@ class Partner extends AbstractClient
                     // generate our own custom payload with the error details?
 
                     throw new RuntimeException(sprintf(
-                        'Error: %d (%s)',
+                        'Error on pass %d: %d (%s)',
+                        $pass,
                         $response->getStatusCode(),
                         $otherProblem
                     ));
@@ -102,7 +104,7 @@ class Partner extends AbstractClient
             }
 
             // If we got here without finding an OAuth or other error,
-            // then we have a usable response. Don't do a second pass.
+            // then we have a usable response. Don't do another pass.
 
             break;
         }
