@@ -1,6 +1,6 @@
 <?php
 
-namespace Consilience\XeroApi\Oauth1;
+namespace Consilience\XeroApi\Client\Oauth1;
 
 /**
  * Token details for a current OAuth1 authorisation.
@@ -9,7 +9,7 @@ namespace Consilience\XeroApi\Oauth1;
  * the current state.
  */
 
-use Consilience\XeroApi\OauthTokenInterface;
+use Consilience\XeroApi\Client\OauthTokenInterface;
 
 class Token implements OauthTokenInterface
 {
@@ -26,6 +26,11 @@ class Token implements OauthTokenInterface
     protected $expiresAt;
     protected $authorizationExpiresAt;
     protected $xeroOrgMuid;
+
+    // Error properties not for persisting.
+
+    protected $oauthProblem;
+    protected $oauthProblemAdvice;
 
     /**
      * @var array All scalar properties for persisting
@@ -66,7 +71,7 @@ class Token implements OauthTokenInterface
         $this->setTokenData($tokenData);
 
         if ($onPersist !== null) {
-            $this->setPersistCallback($onPersist);
+            $this->setOnPersist($onPersist);
         }
     }
 
@@ -84,11 +89,11 @@ class Token implements OauthTokenInterface
 
         $setterNames[] = 'set' . ucfirst($property);
 
-        if (strpos($property, 'oauth_') === 0) {
+        if (strpos($property, 'oauth') === 0) {
             // If the name starts with 'oauth_' then try a setter
             // without that prefix.
 
-            $setterNames[] = 'set' . ucfirst(substr($property, 0, 6));
+            $setterNames[] = 'set' . ucfirst(substr($property, 5));
         }
 
         foreach ($setterNames as $setterName) {
@@ -385,6 +390,74 @@ class Token implements OauthTokenInterface
     }
 
     /**
+     * Get/set/with OAuth error.
+     */
+    protected function setOauthProblem(string $oauthProblem): self
+    {
+        $this->oauthProblem = $oauthProblem;
+        return $this;
+    }
+
+    /**
+     * @return string|null the OAuth error, if any
+     */
+    public function getOauthProblem(): ?string
+    {
+        return $this->oauthProblem;
+    }
+
+    public function withOauthProblem(string $oauthProblem): self
+    {
+        return (clone $this)->setOauthProblem($oauthProblem);
+    }
+
+    /**
+     * Get/set/with OAuth reason.
+     */
+    protected function setOauthProblemAdvice(string $oauthProblemAdvice): self
+    {
+        $this->oauthProblemAdvice = $oauthProblemAdvice;
+        return $this;
+    }
+
+    /**
+     * @return string|null the OAuth reason, if any
+     */
+    public function getOauthProblemAdvice(): ?string
+    {
+        return $this->oauthProblemAdvice;
+    }
+
+    public function withOauthProblemAdvice(string $oauthProblemAdvice): self
+    {
+        return (clone $this)->setOauthProblemAdvice($oauthProblemAdvice);
+    }
+
+    /**
+     * @return bool true if the object contains an OAuth error
+     */
+    public function isError()
+    {
+        return $this->oauthProblem !== null;
+    }
+
+    /**
+     * Convenience method.
+     */
+    public function getErrorCode()
+    {
+        return $this->getOauthProblem();
+    }
+
+    /**
+     * Convenience method.
+     */
+    public function getErrorReason()
+    {
+        return $this->getOauthProblemAdvice();
+    }
+
+    /**
      * Magic getter for properties.
      *
      * @paran string $name
@@ -542,7 +615,7 @@ class Token implements OauthTokenInterface
     }
 
     /**
-     * @return string Properties as JSON, for persistence or logging.
+     * @return string Properties as JSON, for persisting in storage
      */
     public function jsonSerialize() {
         return $this->getTokenData();

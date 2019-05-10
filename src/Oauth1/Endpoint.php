@@ -1,6 +1,6 @@
 <?php
 
-namespace Consilience\XeroApi\Oauth1;
+namespace Consilience\XeroApi\Client\Oauth1;
 
 /**
  * Object for representing a complete endpoint on the Xero APIs.

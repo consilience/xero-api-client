@@ -10,15 +10,20 @@ namespace Consilience\XeroApi\Client;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Consilience\XeroApi\OauthTokenInterface;
+
+use Consilience\XeroApi\Client\OauthTokenInterface;
+use Consilience\XeroApi\Client\Oauth1\Endpoint as Oauth1Endpoint;
 
 use InvalidArgumentException;
+use RuntimeException;
 
 abstract class AbstractClient implements ClientInterface
 {
     use HttpTrait;
 
     /**
+     * TODO: move these to the Token, as that is where the errors will be seen.
+     *
      * See https://developer.xero.com/documentation/auth-and-limits/oauth-issues
      * @var string Values for the PARAM_OAUTH_PROBLEM parameter
      */
@@ -313,10 +318,10 @@ abstract class AbstractClient implements ClientInterface
             $params[$key] = $key . '="' . rawurlencode($value) . '"';
         }
 
-        if ($this->getConfigItem('realm') !== null) {
+        if ($realm = $this->getConfigItem('realm') !== null) {
             array_unshift(
                 $params,
-                'realm="' . rawurlencode($this->getConfigItem('realm')) . '"'
+                'realm="' . rawurlencode($realm) . '"'
             );
         }
 
@@ -339,15 +344,15 @@ abstract class AbstractClient implements ClientInterface
         ];
 
         // Optional parameters should only be set if they have been set as the
-        // parameter may be considered invalid by the Oauth service.
+        // parameter may be considered invalid by the OAuth service.
 
         $optionalParams = [
             'callback'  => 'oauth_callback',
             'verifier'  => 'oauth_verifier',
-            'version'   => 'oauth_version'
+            'version'   => 'oauth_version',
         ];
 
-        if ($oauthToken = $this->getOAuth1Token()->getToken()) {
+        if ($this->getOAuth1Token() && $oauthToken = $this->getOAuth1Token()->getToken()) {
             $params['oauth_token'] = $oauthToken;
         }
 
@@ -410,12 +415,29 @@ abstract class AbstractClient implements ClientInterface
             default:
                 throw new RuntimeException(sprintf(
                     'Unknown signature method: %s',
-                    $$this->getConfigItem('signature_method', '')
+                    $this->getConfigItem('signature_method', '')
                 ));
                 break;
         }
 
         return base64_encode($signature);
+    }
+
+    /**
+     * Get the Endpoint object for deliverying OAuth1 URIs.
+     */
+    public function getOauth1Endpoint()
+    {
+        $oauth1Endpoint = new Oauth1Endpoint();
+
+        // If we have a URI factory, then pass it in, othereise leave it for
+        // OAuth1Endpont to autodiscover.
+
+        if ($uriFactory = $this->getUriFactory()) {
+            $oauth1Endpoint = $oauth1Endpoint->withUriFactory($uriFactory);
+        }
+
+        return $oauth1Endpoint;
     }
 
     /**

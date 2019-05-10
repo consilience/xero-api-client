@@ -1,6 +1,6 @@
 <?php
 
-namespace Consilience\XeroApi\Client;
+namespace Consilience\XeroApi\Client\App;
 
 /**
  * Xero Partner Application client.
@@ -8,8 +8,8 @@ namespace Consilience\XeroApi\Client;
  * This client handles auto-renewals of OAuth 1.0a tokens.
  */
 
-use Consilience\XeroApi\Oauth1\Endpoint;
-use Consilience\XeroApi\Oauth1\Token;
+use Consilience\XeroApi\Client\Oauth1\Token;
+use Consilience\XeroApi\Client\AbstractClient;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -27,7 +27,7 @@ class Partner extends AbstractClient
      * stored then try the updated token. The Token::reload() method is now
      * available to do this. Should we check multiple times? probably not - if
      * the reload gives us a new token, then the refreshing of that was out of
-     * our hands, so we won't be able to frenew it with the details we have
+     * our hands, so we won't be able to renew it with the details we have
      * anyway.
      * While refreshing the token, set up a lock so other processes do
      * not update at the same time. The two could be combined, so the lock
@@ -47,6 +47,9 @@ class Partner extends AbstractClient
             $request = $request->withHeader('User-Agent', $applicationName);
         }
 
+        // Up to two passes.
+        // The second pass is for when the first pass discovers an expired token.
+
         foreach ([1, 2] as $pass) {
             if ($refreshRequired) {
                 $this->refreshToken();
@@ -55,7 +58,7 @@ class Partner extends AbstractClient
             // Sign the request then send it, so long as it is not
             // already marked as expired locally.
 
-            $request = $this->signRequest($request);
+            $request = $this->signRequest($request, static::REQUEST_METHOD_HEADER);
             $response = $this->getClient()->sendRequest($request);
 
             // Check if the token has expired remotely. If it has, it can be renewed.
@@ -140,11 +143,9 @@ class Partner extends AbstractClient
                 'signature_method' => $this->getConfigItem('signature_method'),
             ];
 
-            $oauth1Endpoint = new Endpoint(); // TODO maybe getAuth1Endpont()?
+            // OAuth1 Endpoint.
 
-            if ($uriFactory = $this->getUriFactory()) {
-                $oauth1Endpoint = $oauth1Endpoint->withUriFactory($uriFactory);
-            }
+            $oauth1Endpoint = $this->getOauth1Endpoint();
 
             $refreshUri = $oauth1Endpoint
                 ->getRefreshTokenUri()
@@ -154,7 +155,7 @@ class Partner extends AbstractClient
 
             $request = $this->getRequestFactory()->createRequest('GET', $refreshUri);
 
-            $request = $this->signRequest($request, self::REQUEST_METHOD_QUERY);
+            $request = $this->signRequest($request, static::REQUEST_METHOD_QUERY);
 
             $response = $this->getClient()->sendRequest($request);
 

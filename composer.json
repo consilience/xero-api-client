@@ -1,6 +1,6 @@
 {
-    "name": "consilience/xero-api",
-    "description": "API package for Xero API access, based on Xero OpenAPI specs, PSR-7, PSR-15, PSR-18",
+    "name": "consilience/xero-api-client",
+    "description": "PSR-18 API client for Xero",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -25,7 +25,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Consilience\\XeroApi\\": "src/"
+            "Consilience\\XeroApi\\Client\\": "src/"
         }
     },
     "minimum-stability": "dev",

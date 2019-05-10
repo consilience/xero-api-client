@@ -1,6 +1,6 @@
 <?php
 
-namespace Consilience\XeroApi;
+namespace Consilience\XeroApi\Client;
 
 /**
  *

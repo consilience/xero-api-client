@@ -58,7 +58,8 @@ in this example against authentication 123.
 So, to access the API, start by creating an OAuth 1.0 object.
 
 ```php
-use Consilience\XeroApi\Oauth1\Token;
+use Consilience\XeroApi\Client\Oauth1\Token;
+use Consilience\XeroApi\Client\OauthTokenInterface;
 
 // Get the current token details from the database.
 
@@ -96,7 +97,7 @@ $oauth1Token = $oauth1Token->withGuardTimeSeconds(60 * 5);
 Now we set up a Partner application client.
 
 ```php
-use Consilience\XeroApi\Client\Partner;
+use Consilience\XeroApi\Client\App\Partner;
 
 // This will create a PSR-18 client decorator.
 // Just use it like a PSR-18 client.
