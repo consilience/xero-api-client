@@ -20,10 +20,10 @@ class Token implements OauthTokenInterface
 
     // Properties for persisting.
 
-    protected $token;
-    protected $tokenSecret;
-    protected $sessionHandle;
-    protected $expiresAt;
+    protected $oauthToken;
+    protected $oauthTokenSecret;
+    protected $oauthSessionHandle;
+    protected $oauthExpiresAt;
     protected $authorizationExpiresAt;
     protected $xeroOrgMuid;
 
@@ -36,10 +36,10 @@ class Token implements OauthTokenInterface
      * @var array All scalar properties for persisting
      */
     protected $propertyNames = [
-        'token',
-        'token_secret',
-        'session_handle',
-        'expires_at',
+        'oauth_token',
+        'oauth_token_secret',
+        'oauth_session_handle',
+        'oauth_expires_at',
         'authorization_expires_at',
         'xero_org_muid',
     ];
@@ -87,19 +87,10 @@ class Token implements OauthTokenInterface
         $setterNames = [];
         $property = $this->snakeToCamel($name);
 
-        $setterNames[] = 'set' . ucfirst($property);
+        $setterName = 'set' . ucfirst($property);
 
-        if (strpos($property, 'oauth') === 0) {
-            // If the name starts with 'oauth_' then try a setter
-            // without that prefix.
-
-            $setterNames[] = 'set' . ucfirst(substr($property, 5));
-        }
-
-        foreach ($setterNames as $setterName) {
-            if (method_exists($this, $setterName)) {
-                return $this->$setterName($value);
-            }
+        if (method_exists($this, $setterName)) {
+            return $this->$setterName($value);
         }
 
         // Custom properties.
@@ -141,11 +132,11 @@ class Token implements OauthTokenInterface
     /**
      * Get/set/with token.
      */
-    protected function setToken(string $token): self
+    protected function setOauthToken(string $oauthToken): self
     {
         // Check if this is an refreshed token.
 
-        if ($this->token === null || $this->token === $token) {
+        if ($this->oauthToken === null || $this->oauthToken === $oauthToken) {
             // Token is new, or has not changed.
 
             $this->refreshedFlag = false;
@@ -153,67 +144,67 @@ class Token implements OauthTokenInterface
             $this->refreshedFlag = true;
         }
 
-        $this->token = $token;
+        $this->oauthToken = $oauthToken;
         return $this;
     }
 
-    public function getToken(): ?string
+    public function getOauthToken(): ?string
     {
-        return $this->token;
+        return $this->oauthToken;
     }
 
-    public function withToken(string $token): self
+    public function withOauthToken(string $oauthToken): self
     {
         // FIXME: in two minds about which to use.
 
-        return (clone $this)->setToken($token);
-        //return $this->with('token', $token);
+        return (clone $this)->setOauthToken($oauthToken);
+        //return $this->with('oauthToken', $oauthToken);
     }
 
     /**
      * Get/set/with token secret.
      */
-    protected function setTokenSecret(string $tokenSecret): self
+    protected function setOauthTokenSecret(string $oauthTokenSecret): self
     {
-        $this->tokenSecret = $tokenSecret;
+        $this->oauthTokenSecret = $oauthTokenSecret;
         return $this;
     }
 
-    public function getTokenSecret(): ?string
+    public function getOauthTokenSecret(): ?string
     {
-        return $this->tokenSecret;
+        return $this->oauthTokenSecret;
     }
 
-    public function withTokenSecret(string $tokenSecret): self
+    public function withOauthTokenSecret(string $oauthTokenSecret): self
     {
-        return (clone $this)->setTokenSecret($tokenSecret);
+        return (clone $this)->setOauthTokenSecret($oauthTokenSecret);
     }
 
     /**
      * Get/set/with session handle.
      */
-    protected function setSessionHandle(string $sessionHandle): self
+    protected function setOauthSessionHandle(string $oauthSessionHandle): self
     {
-        $this->sessionHandle = $sessionHandle;
+        $this->oauthSessionHandle = $oauthSessionHandle;
         return $this;
     }
 
-    public function getSessionHandle(): ?string
+    public function getOauthSessionHandle(): ?string
     {
-        return $this->sessionHandle;
+        return $this->oauthSessionHandle;
     }
 
-    public function withSessionHandle(string $sessionHandle): self
+    public function withOauthSessionHandle(string $oauthSessionHandle): self
     {
-        return (clone $this)->setSessionHandle($sessionHandle);
+        return (clone $this)->setOauthSessionHandle($oauthSessionHandle);
     }
 
     /**
      * Get/set/with expires at.
      */
-    protected function setExpiresAt(int $expiresAt): self
+    protected function setOauthExpiresAt(int $oauthExpiresAt): self
     {
-        $this->expiresAt = $expiresAt;
+        $this->oauthExpiresAt = $oauthExpiresAt;
         return $this;
     }
 
@@ -223,14 +214,14 @@ class Token implements OauthTokenInterface
      *
      * @return int unixtimestamp
      */
-    public function getExpiresAt(): ?int
+    public function getOauthExpiresAt(): ?int
     {
-        return $this->expiresAt;
+        return $this->oauthExpiresAt;
     }
 
-    public function withExpiresAt(int $expiresAt): self
+    public function withOauthExpiresAt(int $oauthExpiresAt): self
     {
-        return (clone $this)->setExpiresAt($expiresAt);
+        return (clone $this)->setOauthExpiresAt($oauthExpiresAt);
     }
 
     /**
@@ -238,26 +229,26 @@ class Token implements OauthTokenInterface
      * The expiresIn value is never stored, as it is no real use.
      * It is converted immediately to expiresAt, an absolute time.
      */
-    protected function setExpiresIn(int $expiresIn): self
+    protected function setOauthExpiresIn(int $oauthExpiresIn): self
     {
-        $this->expiresAt = $expiresIn + time();
+        $this->oauthExpiresAt = $oauthExpiresIn + time();
         return $this;
     }
 
-    public function getExpiresIn(): ?int
+    public function getOauthExpiresIn(): ?int
     {
-        $expiresAt = $this->getExpiresAt();
+        $oauthExpiresAt = $this->getOauthExpiresAt();
 
-        if (is_integer($expiresAt)) {
-            return $expiresAt - time();
+        if (is_integer($oauthExpiresAt)) {
+            return $oauthExpiresAt - time();
         }
 
         return null;
     }
 
-    public function withExpiresIn(int $expiresIn): self
+    public function withOauthExpiresIn(int $oauthExpiresIn): self
     {
-        return (clone $this)->setExpiresIn($expiresIn);
+        return (clone $this)->setOauthExpiresIn($oauthExpiresIn);
     }
 
     /**
@@ -442,6 +433,14 @@ class Token implements OauthTokenInterface
     }
 
     /**
+     * @return bool true if the object contains an OAuth token
+     */
+    public function isSuccess()
+    {
+        return $this->oauthToken !== null;
+    }
+
+    /**
      * Convenience method.
      */
     public function getErrorCode()
@@ -555,7 +554,7 @@ class Token implements OauthTokenInterface
             if (is_array($tokenData)) {
                 $token = $tokenData['token'] ?? $tokenData['oauth_token'] ?? '';
 
-                if ($token !== $this->getToken()) {
+                if ($token !== $this->getOauthToken()) {
                     // Token has changed so return a new token object
                     // instantiated with the new data.
 
@@ -588,13 +587,13 @@ class Token implements OauthTokenInterface
      */
     public function isExpired(): ?bool
     {
-        $expiresAt = $this->expiresAt;
+        $oauthExpiresAt = $this->oauthExpiresAt;
 
-        if ($expiresAt === null) {
+        if ($oauthExpiresAt === null) {
             return null;
         }
 
-        return time() >= $expiresAt - $this->guardTimeSeconds;
+        return time() >= $oauthExpiresAt - $this->guardTimeSeconds;
     }
 
     /**

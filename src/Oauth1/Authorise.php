@@ -8,6 +8,7 @@ namespace Consilience\XeroApi\Client\Oauth1;
 
 use Consilience\XeroApi\Client\Oauth1\Endpoint;
 use Consilience\XeroApi\Client\AbstractClient;
+use Consilience\XeroApi\Client\OauthTokenInterface;
 use Consilience\XeroApi\Client\Oauth1\Token;
 
 use Psr\Http\Message\RequestInterface;
@@ -16,6 +17,7 @@ use Psr\Http\Message\ResponseInterface;
 class Authorise extends AbstractClient
 {
     /**
+     * TODO: move this to the AbstractClient, along with its accessor.
      * @var Response
      */
     protected $lastOAuthResponse;
@@ -28,8 +30,10 @@ class Authorise extends AbstractClient
     /**
      * Get Temporary Credentials aka Unauthorised Request Token
      * from the gateway.
+     *
+     * @return Token
      */
-    public function getTemporaryCredentials()
+    public function getTemporaryToken()
     {
         // Query parameters for requesting the temporary credentials.
         // See https://oauth.net/core/1.0a/ section 6.1.1
@@ -73,18 +77,7 @@ class Authorise extends AbstractClient
 
         $oAuthData = $this->parseOAuthResponseData($this->lastOAuthResponse);
 
-        // These are the parameters that we can expect in the response.
-
-        $oauthToken = $oAuthData['oauth_token'] ?? null;
-        $oauthTokenSecret = $oAuthData['oauth_token_secret'] ?? null;
-        $oauthCallbackConfirmed = $oAuthData['oauth_callback_confirmed'] ?? null;
-
-        $oauthProblem = $oAuthData['oauth_problem'] ?? null;
-        $oauthProblemAdvice = $oAuthData['oauth_problem_advice'] ?? null;
-
-        return $oauthToken
-            ? compact(['oauthToken', 'oauthTokenSecret', 'oauthCallbackConfirmed'])
-            : compact(['oauthProblem', 'oauthProblemAdvice']);
+        return new Token($oAuthData);
     }
 
     /**
@@ -93,12 +86,13 @@ class Authorise extends AbstractClient
      * be added to the URL, and those parameters MUST be returned intact
      * on return to the consumer app. However, Xero does not seem to honour that.
      *
+     * @param OauthTokenInterface the temporary access token
      * @return Psr\Http\Message\UriInterface
      */
-    public function authoriseUrl(array $temporaryCredentials = [])
+    public function authoriseUrl(OauthTokenInterface $temporaryToken)
     {
-        if (!empty($temporaryCredentials['oauthToken'])) {
-            $queryParameters['oauth_token'] = $temporaryCredentials['oauthToken'];
+        if ($oauthToken = $temporaryToken->oauthToken) {
+            $queryParameters['oauth_token'] = $oauthToken;
         }
 
         $oauth1Endpoint = $this->getOauth1Endpoint();
@@ -111,20 +105,31 @@ class Authorise extends AbstractClient
 
     /**
      * Exchange the temporary token and verifier for the final tokens.
+     * Long-lived credetials, AKA Access Token.
+     * The temporary token secret is only used for HMAC SHA1 signing.
+     * Xero uses RSA SHA1 with pre-shared keys so the token secret
+     * will be ignored in the signing algorithm.
      *
-     * @return Token
+     * @param OauthTokenInterface temporary token
+     * @param string $oauthTokenVerifier the CSRF verifier
+     * @return Token long-term Access Token
      */
-    public function getTokenCredentials(
-        array $temporaryCredentials,
-        string $oauthToken,
+    public function getAccessToken(
+        OauthTokenInterface $temporaryToken,
         string $oauthVerifier
     ) {
         $queryParameters = [
             'oauth_consumer_key' => $this->getConfigItem('consumer_key'),
-            'oauth_token' => $oauthToken,
+            'oauth_token' => $temporaryToken->oauthToken,
             'oauth_signature_method' => $this->getConfigItem('signature_method'),
             'oauth_verifier' => $oauthVerifier,
         ];
+
+        // Set the temporary token (with its secret) in case it is needed for
+        // HMAC SHA1 signing.
+
+        $this->setOAuth1Token($temporaryToken);
+
         // Construct URI.
 
         $oauth1Endpoint = $this->getOauth1Endpoint();
@@ -146,8 +151,18 @@ class Authorise extends AbstractClient
 
         $oAuthData = $this->parseOAuthResponseData($this->lastOAuthResponse);
 
+        // If the caller wants the raw data, it can be dug out of the
+        // getLastOAuthResponse()
+
         return new Token($oAuthData);
-        return $oAuthData;
+    }
+
+    /**
+     * @return Response the last OAuth PSR-7 response
+     */
+    public function getLastOAuthResponse()
+    {
+        return $this->lastOAuthResponse;
     }
 
     /**

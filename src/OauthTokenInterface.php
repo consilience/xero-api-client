@@ -10,9 +10,9 @@ use \JsonSerializable;
 
 interface OauthTokenInterface extends JsonSerializable
 {
-    public function getToken(): ?string;
+    public function getOauthToken(): ?string;
     public function isExpired(): ?bool;
-    public function getSessionHandle(): ?string;
+    public function getOauthSessionHandle(): ?string;
     public function withTokenData(array $tokenData): OauthTokenInterface;
     public function getTokenData(): array;
     public function persist();

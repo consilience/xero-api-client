@@ -9,53 +9,118 @@ Features include:
 
 * Support for *Partner Application* only at present.
 * Automatic token renewal by time (including guard time) or on an expired token.
-* Callback to the application for persistence of the OAuth1 token object.
-* This package does not include the user authorisation flow. It is for back-end
-  processes to use the authorisation tokens in an agnostic way.
+* Callback to the application for persistence of the OAuth1 token credentails
+  when they gety renewed.
 
 ## Simple Usage
 
-This example is for a Partner application with authentication token details persisted
-in a simple SQLite3 database.
+### Authorising an Application
 
-First create the database.
+This stage is to allow a user to authorise the application to access their
+Xero organisation.
+The result will be a set of token credentials (Access Token) that can be used
+to access the API.
+
+There are a couple of steps in the OAuth 1.0a flow to get the tokens:
+
+1. Get a temporary token.
+2. Send the user to Xero to authorise the applicarion.
+3. The user returns with a verification key (a CSRF token).
+4. Use the temporary token and the verification key to exchange for the
+   long-term Access Token.
+
+Here are the details.
+For each stage you will need the authorisation client:
+
+```php
+use Consilience\XeroApi\Client\Oauth1\Authorise;
+
+// The public key for your RSA certificate will be registered
+// with the Partner application on the gateway.
+
+$authoriseClient = new Authorise([
+    'consumer_key'      => 'S8IVZHU6...HUABRRK',
+    'consumer_secret'   => 'PLWK9PBG...VHXAQOH',
+    'callback_uri'      => 'your callback URL where the user will return to',
+    'redirect_on_error' => true,
+    'signature_method'  => Authorise::SIGNATURE_METHOD_RSA,
+    'private_key_file'  => 'certs/privatekey.pem',
+    'private_key_passphrase' => '',
+]);
+```
+
+First get a temporary token from Xero:
+
+```php
+$temporaryToken = $authoriseClient->getTemporaryToken();
+
+if ($temporaryToken->isError()) {
+    throw new Exception(sprintf(
+        'Failed to get temporary token; error %s (%s)',
+        $temporaryToken->getErrorCode(),
+        $temporaryToken->getErrorReason()
+    ));
+}
+
+// Store it in the session for later.
+
+Session::set('temporary_token', json_encode($temporaryToken));
+```
+
+Then use the temporary token to redirect the user to Xero:
+
+```php
+$authoriseUrl = $authoriseClient->authoriseUrl($temporaryToken);
+header('Location: ' . (string)$authoriseUrl);
+exit;
+```
+
+The user will come back to the callback URL with a verifier:
+
+```php
+    // The verifier will be supplied as a GET parameter.
+
+    $oauthVerifier = $_GET['oauth_verifier'];
+
+    // Retrieve the temporary token we saved earlier.
+
+    $temporaryToken = new Token(json_decode(getSession('temporary_token'), true));
+
+    // Use these details to get the final Access Token.
+
+    $accessToken = $authoriseClient->getAccessToken(
+        $temporaryToken,
+        $oauthVerifier
+    );
+```
+
+Now the access token can be stored so it can be used to access the API.
+We will store it in a simple table in this example.
+
+First create the database to store the current tokens.
 
 ```php
 $db = new SQLite3('auth.db');
 $db->exec('create table if not exists auth(id integer primary key, token text)');
 ```
 
-They get authenticated and use the token details to initialise the auth session.
-This will be covered later, but for now, save the following details.
+Now store the credentials in the database.
+We will store it against authentication ID 123.
 
 ```php
-// The minimum details to capture from the authorisation.
-
-$tokenCredentials = [
-    'token'             => 'SFH1YSOS1QGZ8LAY3UTA4AXPLXAEH6',
-    'token_secret'      => 'APUQGGU3FDAV6YUYZAYKA5RDPZ9SBQ',
-    'session_handle'    => 'D1QQAZDCP28VLCGVUVWO',
-    'expires_at'        => 1868781168,
-];
-
-// Now store it in the database.
-// We will store it against authentication ID 123.
-
 $authId = 123;
 
 $db = new SQLite3('auth.db');
 
 $statement = $db->prepare('replace into auth (id, token) values (:id, :token)');
 $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
-$statement->bindValue(':token', $tokenCredentials, \SQLITE3_TEXT);
+$statement->bindValue(':token', json_encode($accessToken), \SQLITE3_TEXT);
 $statement->execute();
 ```
 
-That gets the ball rolling.
-Each time we want to access the API, or update the token, we will do so
-in this example against authentication 123.
+### Accessing the API.
 
-So, to access the API, start by creating an OAuth 1.0 object.
+So, to access the API, start by creating an OAuth 1.0a object.
 
 ```php
 use Consilience\XeroApi\Client\Oauth1\Token;
@@ -70,20 +135,20 @@ $db = new SQLite3('auth.db');
 $statement = $db->prepare('select token from auth where id = :id');
 $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
 $result = $statement->execute();
-$tokenCredentials = json_decode($result->fetchArray()[0], true);
+$accessTokenData = json_decode($result->fetchArray()[0], true);
 
-$oauth1Token = new Oauth1Token($tokenCredentials);
+$accessToken = new Token($accessTokenData);
 
 // Add a callback to persist any refresh to the token.
 
-$onPersist = function (OauthTokenInterface $oauth1Token) use ($authId, $db) {
+$onPersist = function (OauthTokenInterface $accessToken) use ($authId, $db) {
     $statement = $db->prepare('replace into auth (id, token) values (:id, :token)');
     $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
-    $statement->bindValue(':token', json_encode($oauth1Token), \SQLITE3_TEXT);
+    $statement->bindValue(':token', json_encode($accessToken), \SQLITE3_TEXT);
     $statement->execute();
 };
 
-// Tell the client how to persist any token refreshes.
+// Tell the client how to persist token refreshes.
 
 $oauth1Token = $oauth1Token->withOnPersist($onPersist);
 
@@ -112,7 +177,7 @@ $partner = new Partner($client, $oauth1Token, [
     // RSA is required for Xero.
     'signature_method' => Partner::SIGNATURE_METHOD_RSA,
     // Partner key file
-    'private_key_file' => 'certs/partner-app/privatekey.pem',
+    'private_key_file' => 'certs/privatekey.pem',
     'private_key_passphrase' => '',
 ]);
 ```
@@ -269,9 +334,6 @@ for you automatically.
 Another package will handle the payload parsing and request building.
 This package is just concerned with the HTTP access with OAuth 1.0a
 credentials.
-
-TODO: simple example of authorising access to an organisation using
-League OAuth 1.0 + Xero plugin.
 
 ## TODO
 

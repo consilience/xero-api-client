@@ -137,8 +137,8 @@ class Partner extends AbstractClient
             // another process has already happened to have refreshed it.
 
             $queryParameters = [
-                'oauth_token' => $oAuth1Token->getToken(),
-                'oauth_session_handle' => $oAuth1Token->getSessionHandle(),
+                'oauth_token' => $oAuth1Token->getOauthToken(),
+                'oauth_session_handle' => $oAuth1Token->getOauthSessionHandle(),
                 'oauth_consumer_key' => $this->getConfigItem('consumer_key'),
                 'signature_method' => $this->getConfigItem('signature_method'),
             ];
@@ -161,31 +161,22 @@ class Partner extends AbstractClient
 
             $oAuthData = $this->parseOAuthResponseData($response);
 
+            // Regenerate the token object for further requests.
+
+            $oAuth1Token = $oAuth1Token->withTokenData($oAuthData);
+
             // If the renewal failed, then throw an exception.
 
-            if (! empty($oAuthData['oauth_problem']) || empty($oAuthData)) {
+            if ($oAuth1Token->isError()) {
                 throw new RuntimeException(sprintf(
                     'OAuth token refresh error: "%s" (%s)',
-                    $oAuthData['oauth_problem'] ?? '',
-                    $oAuthData['oauth_problem_advice'] ?? ''
+                    $oAuth1Token->getErrorCode(),
+                    $oAuth1Token->getErrorReason()
                 ));
             }
 
             // As the refresh looks good, update the local token details
             // and fire off persistent storage of it too.
-
-            $refreshedTokenData = [
-                'token' => $oAuthData['oauth_token'],
-                'token_secret' => $oAuthData['oauth_token_secret'],
-                'expires_in' => (int)$oAuthData['oauth_expires_in'],
-                'session_handle' => $oAuthData['oauth_session_handle'],
-                'authorization_expires_in' => (int)$oAuthData['oauth_authorization_expires_in'],
-                'xero_org_muid' => $oAuthData['xero_org_muid'],
-            ];
-
-            // Regenerate the token object for further requests.
-
-            $oAuth1Token = $oAuth1Token->withTokenData($refreshedTokenData);
 
             $oAuth1Token->persist();
         }

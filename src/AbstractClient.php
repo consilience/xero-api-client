@@ -352,7 +352,7 @@ abstract class AbstractClient implements ClientInterface
             'version'   => 'oauth_version',
         ];
 
-        if ($this->getOAuth1Token() && $oauthToken = $this->getOAuth1Token()->getToken()) {
+        if ($this->getOAuth1Token() && $oauthToken = $this->getOAuth1Token()->getOauthToken()) {
             $params['oauth_token'] = $oauthToken;
         }
 
@@ -462,10 +462,11 @@ abstract class AbstractClient implements ClientInterface
         return $data;
     }
 
-    // TODO: the following can be injected classes, allowing further
-    // signing types to be added.
-
     /**
+     * FIXME: Xero does not use this for the Partner app, so it has not
+     * really been tested.
+     * 
+     *
      * @param string $baseString
      * @return string
      */
@@ -473,7 +474,7 @@ abstract class AbstractClient implements ClientInterface
     {
         $key = rawurlencode($this->getConfigItem('consumer_secret'))
             . '&'
-            . rawurlencode($this->getToken()->getConfigItem('token_secret'));
+            . rawurlencode($this->getOAuth1Token()->oauthTokenSecret);
 
         return hash_hmac('sha1', $baseString, $key, true);
     }
