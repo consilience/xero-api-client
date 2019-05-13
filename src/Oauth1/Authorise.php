@@ -54,13 +54,6 @@ class Authorise extends AbstractClient
             'oauth_callback' => $this->getConfigItem('callback_uri'),
         ];
 
-        if ($this->getConfigItem('redirect_on_error')) {
-            // This should force a cancel to come back to the consumer
-            // site, but I'm not sure it is working.
-
-            $queryParameters['redirectOnError'] = 'true';
-        }
-
         // Construct URI.
 
         $oauth1Endpoint = $this->getOauth1Endpoint();
@@ -103,6 +96,13 @@ class Authorise extends AbstractClient
     {
         if ($oauthToken = $temporaryToken->oauthToken) {
             $queryParameters['oauth_token'] = $oauthToken;
+        }
+
+        if ($this->getConfigItem('redirect_on_error')) {
+            // This should force a cancel to come back to the consumer
+            // site, but I'm not sure it is working.
+
+            $queryParameters['redirectOnError'] = 'true';
         }
 
         $oauth1Endpoint = $this->getOauth1Endpoint();

@@ -403,6 +403,16 @@ class Token implements OauthTokenInterface
     }
 
     /**
+     * Undocumented, some results come back with an "error"
+     * GET parameter. Map them onto an OAuth error.
+     */
+    public function setError(string $error): self
+    {
+        $this->oauthProblem = $error;
+        return $this;
+    }
+
+    /**
      * Get/set/with OAuth reason.
      */
     protected function setOauthProblemAdvice(string $oauthProblemAdvice): self
@@ -422,6 +432,16 @@ class Token implements OauthTokenInterface
     public function withOauthProblemAdvice(string $oauthProblemAdvice): self
     {
         return (clone $this)->setOauthProblemAdvice($oauthProblemAdvice);
+    }
+
+    /**
+     * Undocumented, some results come back with an "error_description"
+     * GET parameter. Map them onto an OAuth error.
+     */
+    public function setErrorDescription(string $errorDescription): self
+    {
+        $this->oauthProblemAdvice = $errorDescription;
+        return $this;
     }
 
     /**

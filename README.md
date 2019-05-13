@@ -1,16 +1,20 @@
-# Xero API
+# Xero API Client
 
-API package for Xero authenticated access, PSR-7, PSR-15, PSR-18.
+API package for Xero authenticated access.
+Leverages PSR-7, PSR-17 and PSR-18.
 
 Handles the OAuth 1.0a requests, and token renewals for the *partner application*.
-It does this by offering a decorated PSR-18 
+It does this by offering a decorated PSR-18 client.
+
+Provides support for the authentication flow to capture the OAuth 1.0a tokens.
 
 Features include:
 
 * Support for *Partner Application* only at present.
-* Automatic token renewal by time (including guard time) or on an expired token.
-* Callback to the application for persistence of the OAuth1 token credentails
-  when they gety renewed.
+* Automatic token renewal of a token by its local age, or on an expiry flagged by
+  the remote Xero API.
+* Hook to the application for persistence of the OAuth1 token credentails
+  when they get renewed. This keeps the burden of renewals away from the application.
 
 ## Simple Usage
 
