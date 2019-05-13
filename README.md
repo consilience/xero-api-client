@@ -35,8 +35,9 @@ For each stage you will need the authorisation client:
 ```php
 use Consilience\XeroApi\Client\Oauth1\Authorise;
 
-// The public key for your RSA certificate will be registered
-// with the Partner application on the gateway.
+// The public certificate for your RSA-SHA1 public/private key pair will
+// be registered with the Partner application on the gateway.
+// See: https://developer.xero.com/documentation/auth-and-limits/partner-applications
 
 $authoriseClient = new Authorise([
     'consumer_key'      => 'S8IVZHU6...HUABRRK',
@@ -117,6 +118,40 @@ $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
 $statement->bindValue(':token', json_encode($accessToken), \SQLITE3_TEXT);
 $statement->execute();
 ```
+
+#### Factories
+
+The `Authotise` client needs a few additional objects to operate:
+
+* A PSR-17 HTTP factory (to generate Reqeusts and URIs).
+* A PSR-18 client that it decorates.
+
+These can be installed from Guzzle:
+
+    composer require http-interop/http-factory-guzzle
+
+```php
+$authoriseClient->withUriFactory(new \Http\Factory\Guzzle\UriFactory);
+$authoriseClient->withRequestFactory(new \Http\Factory\Guzzle\RequestFactory);
+$authoriseClient->withClient(new \Http\Adapter\Guzzle6\Client);
+```
+
+or use diactoros:
+
+    composer require http-interop/http-factory-diactoros
+
+```php
+$authoriseClient->withUriFactory(new \Http\Factory\Diactoros\UriFactory);
+$authoriseClient->withRequestFactory(new \Http\Factory\Diactoros\RequestFactory);
+```
+
+Any other PSR-17 HTTP URI and Request factory, and PSR-18 client can be used.
+
+Alternatively, you can enable auto-discovery and leave the `Authorise` client
+to discover the installed factories and create a client for itself.
+
+    composer require http-interop/http-factory-discovery
+    composer require php-http/guzzle6-adapter
 
 ### Accessing the API.
 

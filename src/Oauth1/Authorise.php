@@ -22,8 +22,18 @@ class Authorise extends AbstractClient
      */
     protected $lastOAuthResponse;
 
-    public function __construct(array $config)
-    {
+    /**
+     * @param array $config configuration details
+     * @param ClientInterface $client a PSR-18 client or null for auto-discovery
+     */
+    public function __construct(
+        array $config,
+        ?ClientInterface $client = null
+    ) {
+        if ($client) {
+            $this->setClient($client);
+        }
+
         $this->config = $config;
     }
 

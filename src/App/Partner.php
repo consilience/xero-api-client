@@ -48,7 +48,8 @@ class Partner extends AbstractClient
         }
 
         // Up to two passes.
-        // The second pass is for when the first pass discovers an expired token.
+        // The second pass is for when the first pass results in an expired
+        // token being reported by Xero.
 
         foreach ([1, 2] as $pass) {
             if ($refreshRequired) {

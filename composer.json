@@ -11,17 +11,16 @@
     ],
     "require": {
         "php": "^7.1",
-        "php-http/httplug": "~2.0",
-        "php-http/discovery": "~1.6",
         "php-http/message": "~1.7"
     },
     "provide": {
         "psr/http-client-implementation": "1.0"
     },
     "suggest": {
-        "php-http/guzzle6-adapter": "httplug guzzle adapter (still needed?)",
-        "http-interop/http-factory-discovery": "Factory discovery implementation",
-        "http-interop/http-factory-guzzle": "Factory discovery Guzzle adapter"
+        "http-interop/http-factory-guzzle": "Guzzle PSR-17 HTTP factories",
+        "http-interop/http-factory-diactoros": "Diactoros PSR-17 HTTP factories",
+        "http-interop/http-factory-discovery": "PSR-17 factory discovery",
+        "php-http/guzzle6-adapter": "PSR-18 client implementation"
     },
     "autoload": {
         "psr-4": {

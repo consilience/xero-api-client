@@ -76,10 +76,6 @@ abstract class AbstractClient implements ClientInterface
     protected $applicationName;
 
     /**
-     * TODO: go through the config and distribute any config items over
-     * any setters that are found. The way this is handled can be similar to
-     * the Token config handling, then that can be shared in a trait.
-     *
      * @param OauthTokenInterface $oauth1Token token instance with current credentials
      * @param array $config configuration details
      * @param ClientInterface $client a PSR-18 client or null for auto-discovery
@@ -185,10 +181,10 @@ abstract class AbstractClient implements ClientInterface
             $parts = explode('=', $kvp, 2);
             $key = $decoder($parts[0]);
             $value = isset($parts[1]) ? $decoder($parts[1]) : null;
-            if (!isset($result[$key])) {
+            if (! isset($result[$key])) {
                 $result[$key] = $value;
             } else {
-                if (!is_array($result[$key])) {
+                if (! is_array($result[$key])) {
                     $result[$key] = [$result[$key]];
                 }
                 $result[$key][] = $value;
@@ -464,8 +460,7 @@ abstract class AbstractClient implements ClientInterface
 
     /**
      * FIXME: Xero does not use this for the Partner app, so it has not
-     * really been tested.
-     * 
+     * really been tested. It is needed for the Public application.
      *
      * @param string $baseString
      * @return string
@@ -485,7 +480,7 @@ abstract class AbstractClient implements ClientInterface
      */
     protected function signUsingRsaSha1(string $baseString): string
     {
-        if (!function_exists('openssl_pkey_get_private')) {
+        if (! function_exists('openssl_pkey_get_private')) {
             throw new RuntimeException(
                 'RSA-SHA1 signature method requires the OpenSSL extension.'
             );
