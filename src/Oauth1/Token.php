@@ -3,8 +3,10 @@
 namespace Consilience\XeroApi\Client\Oauth1;
 
 /**
- * Token details for a current OAuth1 authorisation.
- * Also handles storage of refreshed tokens.
+ * Token details for a current OAuth1 authorisation, or any stage
+ * in the OAuth authorisation flow (temporary token, long-term token,
+ * renewed token, errors, failures, etc.)
+ *
  * Does not hold details of keys needed for renewal; holds just
  * the current state.
  */
@@ -66,6 +68,10 @@ class Token implements OauthTokenInterface
      */
     protected $refreshedFlag = false;
 
+    /**
+     * @param array $tokenData OAuth parameters as an associative array
+     * @param callable|null $onPersist function to save the new token on renewal
+     */
     public function __construct(array $tokenData = [], ?callable $onPersist = null)
     {
         $this->setTokenData($tokenData);
@@ -74,6 +80,9 @@ class Token implements OauthTokenInterface
             $this->setOnPersist($onPersist);
         }
     }
+
+    // TODO: fromServerRequest() and fromResponse() to parse tokens or errors
+    // coming from Xero.
 
     /**
      * Set a token property.

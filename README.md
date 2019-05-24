@@ -1,5 +1,18 @@
 # Xero API Client
 
+Table of Contents
+=================
+
+   * [Xero API Client](#xero-api-client)
+      * [Simple Usage](#simple-usage)
+         * [Token Persistence](#token-persistence)
+         * [Authorising an Application](#authorising-an-application)
+            * [Factories](#factories)
+         * [Accessing the Xero API.](#accessing-the-xero-api)
+            * [Create OAuth1 Token Object](#create-oauth1-token-object)
+            * [Configure Partner Application HTTP Client](#configure-partner-application-http-client)
+      * [TODO](#todo)
+
 API package for Xero authenticated access.
 Leverages PSR-7, PSR-17 and PSR-18.
 
@@ -18,12 +31,31 @@ Features include:
 
 ## Simple Usage
 
+### Token Persistence
+
+The Xero Partner tokens expire every 30 minutes and need to be renewed.
+The renewed tokens then must be saved for use on the next API call.
+To perform the persistence in the examples below, we will invoke the
+imaginary class `TokenStorage`. It will have methods:
+
+    TokenStorage::get($tokenKey): string;
+    TokenStorage::save($tokenKey, string $tokenDetails);
+
+The token details will be an array encoded to a JSON string.
+
+The $token key just identifies a token amoung many in storage.
+We'll just use `123` as our key.
+
 ### Authorising an Application
 
 This stage is to allow a user to authorise the application to access their
 Xero organisation.
 The result will be a set of token credentials (Access Token) that can be used
 to access the API.
+
+You can use an alternative package for obtaining authorisation, such as Guzzle
+and [Invoiced/oauth1-xero](https://github.com/Invoiced/oauth1-xero).
+Or use this package to reduce dependencies, whatever fits your needs best.
 
 There are a couple of steps in the OAuth 1.0a flow to get the tokens:
 
@@ -67,7 +99,8 @@ if ($temporaryToken->isError()) {
     ));
 }
 
-// Store it in the session for later.
+// Store the token object in the session for later.
+// JSON serialise it; we will rebuild it.
 
 Session::set('temporary_token', json_encode($temporaryToken));
 ```
@@ -75,57 +108,44 @@ Session::set('temporary_token', json_encode($temporaryToken));
 Then use the temporary token to redirect the user to Xero:
 
 ```php
+// Your framework will probably have its own way to do a redirect
+// that allows it to exit cleanly.
+
 $authoriseUrl = $authoriseClient->authoriseUrl($temporaryToken);
 header('Location: ' . (string)$authoriseUrl);
 exit;
 ```
 
-The user will come back to the callback URL with a verifier:
+The user will come back to the callback URL with a *verifier*:
 
 ```php
-    // The verifier will be supplied as a GET parameter.
+// The verifier will be supplied as a GET parameter.
 
-    $oauthVerifier = $_GET['oauth_verifier'];
+$oauthVerifier = $_GET['oauth_verifier'];
 
-    // Retrieve the temporary token we saved earlier.
+// Retrieve (and rebuild) the temporary token object we saved earlier.
 
-    $temporaryToken = new Token(json_decode(getSession('temporary_token'), true));
+$temporaryToken = new Token(json_decode(Session::get('temporary_token'), true));
 
-    // Use these details to get the final Access Token.
+// Use these details to get the final Access Token.
 
-    $accessToken = $authoriseClient->getAccessToken(
-        $temporaryToken,
-        $oauthVerifier
-    );
+$accessToken = $authoriseClient->getAccessToken(
+    $temporaryToken,
+    $oauthVerifier
+);
 ```
 
-Now the access token can be stored so it can be used to access the API.
-We will store it in a simple table in this example.
-
-First create the database to store the current tokens.
+Now the access token can be stored for using to access the Xero API.
+We will store it against token key `123` so we can get it back later.
 
 ```php
-$db = new SQLite3('auth.db');
-$db->exec('create table if not exists auth(id integer primary key, token text)');
-```
-
-Now store the credentials in the database.
-We will store it against authentication ID 123.
-
-```php
-$authId = 123;
-
-$db = new SQLite3('auth.db');
-
-$statement = $db->prepare('replace into auth (id, token) values (:id, :token)');
-$statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
-$statement->bindValue(':token', json_encode($accessToken), \SQLITE3_TEXT);
-$statement->execute();
+$tokenKey = 123;
+TokenStorage::save($tokenKey, json_encode($accessToken));
 ```
 
 #### Factories
 
-The `Authotise` client needs a few additional objects to operate:
+The `Authorise` client needs a few additional objects to operate:
 
 * A PSR-17 HTTP factory (to generate Reqeusts and URIs).
 * A PSR-18 client that it decorates.
@@ -157,34 +177,28 @@ to discover the installed factories and create a client for itself.
     composer require http-interop/http-factory-discovery
     composer require php-http/guzzle6-adapter
 
-### Accessing the API.
+### Accessing the Xero API.
 
-So, to access the API, start by creating an OAuth 1.0a object.
+#### Create OAuth1 Token Object
+
+To access the API, start by creating an OAuth 1.0a token object.
 
 ```php
 use Consilience\XeroApi\Client\Oauth1\Token;
 use Consilience\XeroApi\Client\OauthTokenInterface;
 
-// Get the current token details from the database.
+// Get the current token details from storage.
 
-$authId = 123;
+$tokenKey = 123;
 
-$db = new SQLite3('auth.db');
+$accessTokenData = TokenStorage::get($tokenKey);
 
-$statement = $db->prepare('select token from auth where id = :id');
-$statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
-$result = $statement->execute();
-$accessTokenData = json_decode($result->fetchArray()[0], true);
-
-$accessToken = new Token($accessTokenData);
+$accessToken = new Token(json_decode($accessTokenData, true));
 
 // Add a callback to persist any refresh to the token.
 
-$onPersist = function (OauthTokenInterface $accessToken) use ($authId, $db) {
-    $statement = $db->prepare('replace into auth (id, token) values (:id, :token)');
-    $statement->bindValue(':id', $authId, \SQLITE3_INTEGER);
-    $statement->bindValue(':token', json_encode($accessToken), \SQLITE3_TEXT);
-    $statement->execute();
+$onPersist = function (OauthTokenInterface $accessToken) use ($tokenKey) {
+    TokenStorage::save($tokenKey, json_encode($accessToken));
 };
 
 // Tell the client how to persist token refreshes.
@@ -197,6 +211,8 @@ $oauth1Token = $oauth1Token->withOnPersist($onPersist);
 
 $oauth1Token = $oauth1Token->withGuardTimeSeconds(60 * 5);
 ```
+
+#### Configure Partner Application HTTP Client
 
 Now we set up a Partner application client.
 
@@ -238,7 +254,7 @@ you will need to install the adapters through composer:
 * http-interop/http-factory-discovery [later]
 
 Otherwise, the message factory and client can be passed in
-when instantiating (example TODO).
+when instantiating.
 
 Now we can make a request of the API.
 Any request wil work - GET, POST, PUT and to any Xero endpoint
@@ -254,12 +270,16 @@ use Http\Discovery\MessageFactoryDiscovery;
 
 $messageFactory = MessageFactoryDiscovery::find();
 
-$response = $partner->sendRequest(
-    $messageFactory->createRequest(
-        'GET',
-        'https://api.xero.com/api.xro/2.0/organisation'
-    )->withHeader('Accept', 'application/json')
-);
+// This is a very simple request, with no parameters and no payload.
+// Builing more complex requests is a job for another package, and
+// that will be auto-generated from the Xero OpenAPI specs.
+
+$request = $messageFactory->createRequest(
+    'GET',
+    'https://api.xero.com/api.xro/2.0/organisation'
+)->withHeader('Accept', 'application/json');
+
+$response = $partner->sendRequest($request);
 
 $payloadData = json_decode((string)$response->getBody(), true);
 var_dump($payloadData);
@@ -295,62 +315,7 @@ array(5) {
       string(3) "GBP"
       ["CountryCode"]=>
       string(2) "GB"
-      ["IsDemoCompany"]=>
-      bool(false)
-      ["OrganisationStatus"]=>
-      string(6) "ACTIVE"
-      ["RegistrationNumber"]=>
-      string(0) ""
-      ["TaxNumber"]=>
-      string(11) "12345678910"
-      ["FinancialYearEndDay"]=>
-      int(31)
-      ["FinancialYearEndMonth"]=>
-      int(3)
-      ["SalesTaxBasis"]=>
-      string(7) "ACCRUAL"
-      ["SalesTaxPeriod"]=>
-      string(9) "QUARTERLY"
-      ["DefaultSalesTax"]=>
-      string(13) "Tax Exclusive"
-      ["DefaultPurchasesTax"]=>
-      string(13) "Tax Exclusive"
-      ["CreatedDateUTC"]=>
-      string(21) "/Date(1436961673000)/"
-      ["OrganisationEntityType"]=>
-      string(7) "COMPANY"
-      ["Timezone"]=>
-      string(3) "UTC"
-      ["ShortCode"]=>
-      string(6) ""
-      ["OrganisationID"]=>
-      string(36) "UUID-REDACTED"
-      ["Edition"]=>
-      string(8) "BUSINESS"
-      ["Class"]=>
-      string(7) "STARTER"
-      ["LineOfBusiness"]=>
-      string(20) "Software Development"
-      ["Addresses"]=>
-      array(2) {
-        [0]=>
-        array(7) {
-          ["AddressType"]=>
-          string(6) "STREET"
-          ["AddressLine1"]=>
-          string(10) "1 No Place"
-          ["City"]=>
-          string(9) "Edinburgh"
-          ["Region"]=>
-          string(0) ""
-          ["PostalCode"]=>
-          string(0) ""
-          ["Country"]=>
-          string(2) "UK"
-          ["AttentionTo"]=>
-          string(0) ""
-        }
-      }
+      ...snip...
       ["Phones"]=>
       array(0) {
       }
@@ -366,9 +331,9 @@ array(5) {
 ```
 
 That's it. With the correct method, URL, `Accept` header and payload
-(if using `POST`) you can access all parts of the API.
+(if using `POST`) you can send requests to all parts of the Xero API.
 Token renewals - for the Partner application at least - will be handled
-for you automatically.
+for you automatically and invisibly to the application.
 
 Another package will handle the payload parsing and request building.
 This package is just concerned with the HTTP access with OAuth 1.0a
@@ -377,10 +342,8 @@ credentials.
 ## TODO
 
 * Tests (as usual).
-* Support multiple discovery packages.
-* Is there a better way of handling key files, perhaps as streams?
+* Is there a better way of handling key files, perhaps as streams, so
+  it can be supplied as a path, a string, a file resource etc?
 * Some better exception handling, so we can catch a failed token, redacted
   authorisation, general network error etc and handle appropriately.
-* Configuration should probably be an class rather than an array. It would
-  be self documenting, validating, serialisable etc.
 
