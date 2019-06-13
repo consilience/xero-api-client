@@ -26,7 +26,7 @@ class Token implements OauthTokenInterface
     protected $oauthTokenSecret;
     protected $oauthSessionHandle;
     protected $oauthExpiresAt;
-    protected $authorizationExpiresAt;
+    protected $oauthAuthorizationExpiresAt;
     protected $xeroOrgMuid;
 
     // Error properties not for persisting.
@@ -42,7 +42,7 @@ class Token implements OauthTokenInterface
         'oauth_token_secret',
         'oauth_session_handle',
         'oauth_expires_at',
-        'authorization_expires_at',
+        'oauth_authorization_expires_at',
         'xero_org_muid',
     ];
 
@@ -263,9 +263,9 @@ class Token implements OauthTokenInterface
     /**
      * Get/set/with authorization expires at.
      */
-    protected function setAuthorizationExpiresAt(int $authorizationExpiresAt): self
+    protected function setOauthAuthorizationExpiresAt(int $oauthAuthorizationExpiresAt): self
     {
-        $this->authorizationExpiresAt = $authorizationExpiresAt;
+        $this->oauthAuthorizationExpiresAt = $oauthAuthorizationExpiresAt;
         return $this;
     }
 
@@ -275,39 +275,39 @@ class Token implements OauthTokenInterface
      *
      * @return int unixtimestamp
      */
-    public function getAuthorizationExpiresAt(): ?int
+    public function getOauthAuthorizationExpiresAt(): ?int
     {
-        return $this->authorizationExpiresAt;
+        return $this->oauthAuthorizationExpiresAt;
     }
 
-    public function withAuthorizationExpiresAt(int $authorizationExpiresAt): self
+    public function withOauthAuthorizationExpiresAt(int $oauthAuthorizationExpiresAt): self
     {
-        return (clone $this)->setAuthorizationExpiresAt($authorizationExpiresAt);
+        return (clone $this)->setOauthAuthorizationExpiresAt($oauthAuthorizationExpiresAt);
     }
 
     /**
      * Get/set/with authorization expires in.
      */
-    protected function setAuthorizationExpiresIn(int $authorizationExpiresIn): self
+    protected function setOauthAuthorizationExpiresIn(int $oauthAuthorizationExpiresIn): self
     {
-        $this->authorizationExpiresAt = $authorizationExpiresIn + time();
+        $this->oauthAuthorizationExpiresAt = $oauthAuthorizationExpiresIn + time();
         return $this;
     }
 
-    public function getAuthorizationExpiresIn(): ?int
+    public function getOauthAuthorizationExpiresIn(): ?int
     {
-        $authorizationExpiresAt = $this->getAuthorizationExpiresAt();
+        $oauthAuthorizationExpiresAt = $this->getOauthAuthorizationExpiresAt();
 
-        if (is_integer($authorizationExpiresAt)) {
-            return $authorizationExpiresAt - time();
+        if (is_integer($oauthAuthorizationExpiresAt)) {
+            return $oauthAuthorizationExpiresAt - time();
         }
 
         return null;
     }
 
-    public function withAuthorizationExpiresIn(int $authorizationExpiresIn): self
+    public function withOauthAuthorizationExpiresIn(int $oauthauthorizationExpiresIn): self
     {
-        return (clone $this)->setAuthorizationExpiresIn($authorizationExpiresIn);
+        return (clone $this)->setOauthAuthorizationExpiresIn($oauthAuthorizationExpiresIn);
     }
 
     /**
