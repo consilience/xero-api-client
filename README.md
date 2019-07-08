@@ -338,6 +338,8 @@ for you automatically and invisibly to the application.
 Another package will handle the payload parsing and request building.
 This package is just concerned with the HTTP access with OAuth 1.0a
 credentials.
+The Xero API Operations package is in development (and usable now) here:
+https://github.com/consilience/xero-api-sdk
 
 ## TODO
 
