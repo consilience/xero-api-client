@@ -69,9 +69,6 @@ class Partner extends AbstractClient
             // decode OAuth errors into a different payload that can be pulled
             // into the API models.
 
-            // TODO: parse the response direct into a Token to validate
-            // and extract any potential OAuth data.
-
             $oAuthData = $this->parseOAuthResponseData($response);
 
             if (! empty($oAuthData)) {
@@ -101,12 +98,12 @@ class Partner extends AbstractClient
                     // Perhaps we don't throw an exception (PSR-18 and all) but
                     // generate our own custom payload with the error details?
 
-                    throw new RuntimeException(sprintf(
+                    /*throw new RuntimeException(sprintf(
                         'Error on pass %d: %d (%s)',
                         $pass,
                         $response->getStatusCode(),
                         $otherProblem
-                    ));
+                    ));*/
                 }
             }
 
