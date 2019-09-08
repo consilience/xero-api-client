@@ -4,13 +4,14 @@ Table of Contents
 =================
 
    * [Xero API Client](#xero-api-client)
-      * [Simple Usage](#simple-usage)
+   * [Table of Contents](#table-of-contents)
+      * [Simple Usage - Partner Application](#simple-usage---partner-application)
          * [Token Persistence](#token-persistence)
          * [Authorising an Application](#authorising-an-application)
             * [Factories](#factories)
          * [Accessing the Xero API.](#accessing-the-xero-api)
             * [Create OAuth1 Token Object](#create-oauth1-token-object)
-            * [Configure Partner Application HTTP Client](#configure-partner-application-http-client)
+      * [Configure HTTP Client](#configure-http-client)
       * [TODO](#todo)
 
 API package for Xero authenticated access.
@@ -24,12 +25,13 @@ Provides support for the authentication flow to capture the OAuth 1.0a tokens.
 Features include:
 
 * Support for *Partner Application* only at present.
+  (Note: support for *Private Applications* is being added and will be tidied up soon.
 * Automatic token renewal of a token by its local age, or on an expiry flagged by
   the remote Xero API.
 * Hook to the application for persistence of the OAuth1 token credentails
   when they get renewed. This keeps the burden of renewals away from the application.
 
-## Simple Usage
+## Simple Usage - Partner Application
 
 ### Token Persistence
 
@@ -183,6 +185,9 @@ to discover the installed factories and create a client for itself.
 
 To access the API, start by creating an OAuth 1.0a token object.
 
+For the *Partner Application* this will be a renewable token that will
+be updated in storage each time it gets renewed.
+
 ```php
 use Consilience\XeroApi\Client\Oauth1\Token;
 use Consilience\XeroApi\Client\OauthTokenInterface;
@@ -212,12 +217,27 @@ $oauth1Token = $oauth1Token->withOnPersist($onPersist);
 $oauth1Token = $oauth1Token->withGuardTimeSeconds(60 * 5);
 ```
 
-#### Configure Partner Application HTTP Client
-
-Now we set up a Partner application client.
+For the *Private Application* the oauth token is a lot simpler.
+Set the token to the consumer key you were given when setting
+up the private application.
 
 ```php
+// Example Private Application consumer key.
+
+$oauth1Token = new Token ([
+    'oauth_token' => 'PQ4351VSH4FHXTJTPN3JBBBNYSAYXM',
+]);
+```
+
+## Configure HTTP Client
+
+Now we set up a Partner or Private application client.
+
+```php
+use Consilience\XeroApi\Client\AbstractClient;
+
 use Consilience\XeroApi\Client\App\Partner;
+use Consilience\XeroApi\Client\App\AppPrivate;
 
 // This will create a PSR-18 client decorator.
 // Just use it like a PSR-18 client.
@@ -225,13 +245,16 @@ use Consilience\XeroApi\Client\App\Partner;
 // $client can be a Psr\Http\Client\ClientInterface PSR-18 client
 // of your choice, or `null` for auto-discovery.
 
-$partner = new Partner($client, $oauth1Token, [
+$app = new AppPrivate($client, $oauth1Token, [
+// or
+$app = new Partner($client, $oauth1Token, [
     // The key and secret are needed for signing.
     'consumer_key'    => 'PQ4351VSH4FHXTJTPN3JBBBNYSAYXM',
     'consumer_secret' => '1FWE9NCU8SYB8S9ROFDTCUDCC3UXMF',
     // RSA is required for Xero.
-    'signature_method' => Partner::SIGNATURE_METHOD_RSA,
-    // Partner key file
+    'signature_method' => AbstractClient::SIGNATURE_METHOD_RSA,
+    // Key file.
+    // Xero will already have the public part of your key.
     'private_key_file' => 'certs/privatekey.pem',
     'private_key_passphrase' => '',
 ]);
@@ -240,7 +263,7 @@ $partner = new Partner($client, $oauth1Token, [
 The application should be provided, which is used as a User Agent.
 This helps Xero when they look at their logs.
 
-    $partner = $partner->withApplicationName('My Ace Application');
+    $app = $app->withApplicationName('My Ace Application');
 
 To support Guzzle as the underlying PSR-18 client, and the
 unserlying PSR-17 message factory through auto-discovery,
@@ -279,7 +302,7 @@ $request = $messageFactory->createRequest(
     'https://api.xero.com/api.xro/2.0/organisation'
 )->withHeader('Accept', 'application/json');
 
-$response = $partner->sendRequest($request);
+$response = $app->sendRequest($request);
 
 $payloadData = json_decode((string)$response->getBody(), true);
 var_dump($payloadData);

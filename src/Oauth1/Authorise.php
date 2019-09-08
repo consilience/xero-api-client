@@ -3,7 +3,8 @@
 namespace Consilience\XeroApi\Client\Oauth1;
 
 /**
- * Client for performing the initial authorisation.
+ * Client for performing the initial OAUth1.0 authorisation
+ * for the Partner application.
  */
 
 use Consilience\XeroApi\Client\Oauth1\Endpoint;
@@ -17,7 +18,6 @@ use Psr\Http\Message\ResponseInterface;
 class Authorise extends AbstractClient
 {
     /**
-     * TODO: move this to the AbstractClient, along with its accessor.
      * @var Response
      */
     protected $lastOAuthResponse;

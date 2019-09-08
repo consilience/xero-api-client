@@ -542,7 +542,11 @@ abstract class AbstractClient implements ClientInterface
      */
     protected function generateNonce(RequestInterface $request): string
     {
-        return sha1(uniqid('', true) . $request->getUri()->getHost() . $request->getUri()->getPath());
+        return sha1(
+            uniqid('', true)
+            . $request->getUri()->getHost()
+            . $request->getUri()->getPath()
+        );
     }
 
     /**
