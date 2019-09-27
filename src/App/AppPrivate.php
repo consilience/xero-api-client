@@ -9,9 +9,7 @@ namespace Consilience\XeroApi\Client\App;
  * needed. Also no token renewals.
  */
 
-//use Consilience\XeroApi\Client\Oauth1\Token;
 use Consilience\XeroApi\Client\AbstractClient;
-
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
