@@ -141,4 +141,17 @@ trait HttpTrait
     {
         return (clone $this)->setClient($client);
     }
+
+    /**
+     * Pass any unknown methods up the chain to the parent decorator,
+     * if there is one.
+     */
+    public function __call($method, $parameters)
+    {
+        $client = $this->getClient();
+
+        $result = $client->$method(...$parameters);
+
+        return ($result === $client) ? $this : $result;
+    }
 }
